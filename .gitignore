@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+*.lock
+yarn.lock
+
+# Build output
+dist/
+build/
+.next/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-workspace
+.DS_Store
+
+# iOS/Xcode
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+.xcworkspace/xcshareddata/
+
+# macOS/OS specific
+.DS_Store
+.AppleDouble
+.LSOverride
+*.swp
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+
+# Testing
+coverage/
+
+# Temporary
+tmp/
+temp/
