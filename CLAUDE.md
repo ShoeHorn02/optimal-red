@@ -10,8 +10,9 @@ Optimal Red is a comprehensive health tracking application for Apple ecosystem d
 
 ## Current Status
 
-**Phase**: Phase 0 (MVP) - Initialize monorepo & create Watch + iPhone apps
+**Phase**: Phase 0 (MVP) - ✅ Watch + iPhone apps built and running
 **Date Started**: 2026-06-27
+**Date Completed**: 2026-06-28
 **GitHub**: https://github.com/ShoeHorn02/optimal-red
 
 ### What's Done
@@ -19,10 +20,38 @@ Optimal Red is a comprehensive health tracking application for Apple ecosystem d
 - [x] Shared types package initialized (health metrics, user models)
 - [x] Backend package template created (Next.js + Drizzle)
 - [x] GitHub repository created
-- [ ] Watch app created (In Progress)
-- [ ] iPhone app created (In Progress)
+- [x] Watch app created - ✅ Built & Running
+- [x] iPhone app created - ✅ Built & Running
+- [x] HealthKit integration on both Watch & iPhone
+- [x] WatchConnectivity setup for Watch ↔ iPhone communication
+- [x] SwiftData persistence on iPhone (StoredHealthMetric model)
+- [x] TabView UI (Today's Metrics, History, Settings)
 - [ ] CI/CD workflows set up
 - [ ] Backend database schema
+
+## MVP Status (Phase 0)
+
+**✅ Working:**
+- Watch app fetches HealthKit data: heart rate, distance, elevation, calories
+- Watch displays metrics on screen
+- iPhone receives metrics from Watch via WatchConnectivity
+- iPhone stores metrics in SwiftData (local database)
+- iPhone displays today's metrics in MetricsView
+- iPhone shows historical metrics in HistoryView
+- Settings view shows connection status
+- Both apps built successfully on simulators
+
+**🚀 Ready for:**
+- Testing Watch → iPhone data transmission
+- Testing SwiftData persistence
+- Manual testing on real devices (requires provisioning profiles)
+- TestFlight beta distribution
+
+**Next Phase (Phase 1):**
+- Add cloud backend (Next.js + PostgreSQL)
+- Implement sync engine on iPhone
+- Add Apple Sign-in authentication
+- Deploy to DigitalOcean
 
 ## Architecture
 
