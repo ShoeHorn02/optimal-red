@@ -10,7 +10,7 @@ Optimal Red is a comprehensive health tracking application for Apple ecosystem d
 
 ## Current Status
 
-**Phase**: Phase 0 (MVP) - ✅ Watch + iPhone apps built and running
+**Phase**: Phase 0 (MVP) - ✅ Watch + iPhone apps built and running on simulators
 **Date Started**: 2026-06-27
 **Date Completed**: 2026-06-28
 **GitHub**: https://github.com/ShoeHorn02/optimal-red
@@ -20,12 +20,15 @@ Optimal Red is a comprehensive health tracking application for Apple ecosystem d
 - [x] Shared types package initialized (health metrics, user models)
 - [x] Backend package template created (Next.js + Drizzle)
 - [x] GitHub repository created
-- [x] Watch app created - ✅ Built & Running
-- [x] iPhone app created - ✅ Built & Running
+- [x] Watch app created - ✅ Built & Running on simulator
+- [x] iPhone app created - ✅ Built & Running on simulator
 - [x] HealthKit integration on both Watch & iPhone
+- [x] HealthKit permission strings in build settings (NSHealthShareUsageDescription, NSHealthUpdateUsageDescription)
 - [x] WatchConnectivity setup for Watch ↔ iPhone communication
 - [x] SwiftData persistence on iPhone (StoredHealthMetric model)
 - [x] TabView UI (Today's Metrics, History, Settings)
+- [ ] Pair simulators and test Watch → iPhone data flow end-to-end
+- [ ] Provision real devices for on-device testing
 - [ ] CI/CD workflows set up
 - [ ] Backend database schema
 
@@ -39,11 +42,15 @@ Optimal Red is a comprehensive health tracking application for Apple ecosystem d
 - iPhone displays today's metrics in MetricsView
 - iPhone shows historical metrics in HistoryView
 - Settings view shows connection status
-- Both apps built successfully on simulators
+- Both apps build and run on simulators
+
+**⚠️ Known Simulator Limitation:**
+- WatchConnectivity between simulators requires paired simulators (iOS + watchOS)
+- Must launch both from Xcode using a paired scheme — running them independently won't connect
+- Use Window → Devices and Simulators in Xcode to verify pairing
 
 **🚀 Ready for:**
-- Testing Watch → iPhone data transmission
-- Testing SwiftData persistence
+- End-to-end Watch → iPhone data transmission test (paired simulators)
 - Manual testing on real devices (requires provisioning profiles)
 - TestFlight beta distribution
 
@@ -167,21 +174,23 @@ Mac + Web Dashboard
 - `packages/shared/src/models/health-metrics.ts` - HealthMetric, DailyMetrics, constants
 - `packages/shared/src/models/user.ts` - User, AuthToken, SyncSession
 
-### Watch App (To Create)
-- `packages/watchos/OptimalRedWatch/OptimalRedWatchApp.swift`
-- `packages/watchos/OptimalRedWatch/Views/MetricsView.swift`
-- `packages/watchos/OptimalRedWatch/Services/HealthKitService.swift`
-- `packages/watchos/OptimalRedWatch/Services/WatchConnectivityService.swift`
+### Watch App
+- `packages/watchos/OptimalRedWatch/OptimalRedWatch Watch App/OptimalRedWatchApp.swift` - App entry point
+- `packages/watchos/OptimalRedWatch/OptimalRedWatch Watch App/Views/ContentView.swift` - Main watch UI
+- `packages/watchos/OptimalRedWatch/OptimalRedWatch Watch App/Services/HealthKitManager.swift` - HealthKit queries
+- `packages/watchos/OptimalRedWatch/OptimalRedWatch Watch App/Services/WatchConnectivityManager.swift` - WC session
+- `packages/watchos/OptimalRedWatch/OptimalRedWatch.xcodeproj/project.pbxproj` - Project config (HealthKit permission strings live here as INFOPLIST_KEY_ build settings)
 
-### iPhone App (To Create)
-- `packages/ios/OptimalRed/OptimalRedApp.swift`
-- `packages/ios/OptimalRed/Views/MetricsView.swift`
-- `packages/ios/OptimalRed/Views/HistoryView.swift`
-- `packages/ios/OptimalRed/Services/HealthKitService.swift`
-- `packages/ios/OptimalRed/Services/WatchConnectivityService.swift`
-- `packages/ios/OptimalRed/Persistence/SwiftDataModels.swift`
+### iPhone App
+- `packages/ios/OptimalRed/OptimalRed/OptimalRedApp.swift` - App entry point
+- `packages/ios/OptimalRed/OptimalRed/Views/MetricsView.swift` - Today's metrics tab
+- `packages/ios/OptimalRed/OptimalRed/Views/HistoryView.swift` - History tab
+- `packages/ios/OptimalRed/OptimalRed/Services/HealthKitService.swift` - HealthKit
+- `packages/ios/OptimalRed/OptimalRed/Services/WatchConnectivityService.swift` - Receives from Watch
+- `packages/ios/OptimalRed/OptimalRed/Persistence/SwiftDataModels.swift` - SwiftData models
+- `packages/ios/OptimalRed/OptimalRed/Info.plist` - HealthKit permission strings
 
-### Backend (To Create)
+### Backend (Phase 1 - To Create)
 - `packages/backend/app/api/health/sync/route.ts`
 - `packages/backend/lib/db/schema.ts` (Drizzle)
 
@@ -273,33 +282,30 @@ In Xcode Info.plist for both Watch & iPhone:
 - [x] Created app.optimalred.watchos.watchkit Bundle ID (WatchKit - HealthKit)
 - [x] Created app.optimalred.macos Bundle ID (Mac - Sign in with Apple, iCloud)
 - [x] Enabled HealthKit on iOS, watchOS, and WatchKit
+- [x] Added HealthKit permission strings (NSHealthShareUsageDescription, NSHealthUpdateUsageDescription)
+- [x] Set Team ID in Xcode projects (DEVELOPMENT_TEAM = 6XYMR8VRKR)
 - [ ] Create 4 development provisioning profiles (iOS, watchOS, WatchKit, macOS)
 - [ ] Download and import profiles to Xcode
-- [ ] Set Team ID in Xcode projects
-- [ ] Added HealthKit to Info.plist
 
 ## Next Steps
 
-1. **Create Watch App** (Xcode)
-   - New watchOS project
-   - HealthKit permissions
-   - Read HR, distance, elevation, calories
-   - Display on Watch face
+1. **Test Watch ↔ iPhone connection** (simulators)
+   - Xcode auto-pairs simulators when you run the Watch scheme — it should launch the companion iPhone simulator automatically
+   - If they still don't connect: run on real devices (Watch + iPhone) — WatchConnectivity is more reliable on hardware
 
-2. **Create iPhone App** (Xcode)
-   - New iOS project
-   - WatchConnectivity receiver
-   - SwiftData models
-   - Display metrics list + history
+2. **Provision real devices** (Apple Developer Console)
+   - Create iOS + watchOS development provisioning profiles
+   - Download and import to Xcode
+   - Run on physical iPhone + Apple Watch for true end-to-end test
 
 3. **Set Up CI/CD**
    - `.github/workflows/test-watchos.yml`
    - `.github/workflows/test-ios.yml`
 
-4. **Test MVP** (TestFlight)
-   - Watch sends metrics
-   - iPhone receives & displays
-   - Works offline
+4. **TestFlight beta**
+   - Build for distribution
+   - Upload via fastlane or Xcode Organizer
+   - Invite testers
 
 5. **Start Phase 1** (Backend)
    - Deploy Next.js to DigitalOcean
@@ -335,4 +341,4 @@ In Xcode Info.plist for both Watch & iPhone:
 
 ---
 
-Last Updated: 2026-06-27 | Status: Phase 0 Initialization
+Last Updated: 2026-06-28 | Status: Phase 0 complete — both apps running on simulators, testing on real devices next
