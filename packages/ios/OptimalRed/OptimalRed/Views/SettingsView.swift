@@ -1,9 +1,10 @@
 import SwiftUI
+import CloudKit
 
 struct SettingsView: View {
   @EnvironmentObject var healthKitManager: HealthKitManager
   @EnvironmentObject var watchConnectivityManager: WatchConnectivityManager
-  @State private var autoRefresh = true
+  @StateObject private var ckSync = CloudKitSyncService.shared
 
   var body: some View {
     NavigationStack {
@@ -21,21 +22,70 @@ struct SettingsView: View {
           }
         }
 
+        Section("iCloud Sync") {
+          LabeledContent("iCloud Account") {
+            Text(ckSync.accountStatus.label)
+              .foregroundStyle(ckSync.accountStatus == .available ? .green : .red)
+              .font(.subheadline)
+          }
+
+          if let last = ckSync.lastSyncDate {
+            LabeledContent("Last Sync") {
+              Text(last.formatted(.relative(presentation: .named)))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            }
+          }
+
+          if ckSync.isSyncing {
+            LabeledContent("Syncing…") {
+              ProgressView(value: ckSync.syncProgress)
+                .frame(width: 100)
+            }
+          } else {
+            Button {
+              ckSync.sync()
+            } label: {
+              Label("Sync Workouts to iCloud", systemImage: "icloud.and.arrow.up")
+            }
+            .disabled(ckSync.accountStatus != .available)
+          }
+
+          if let error = ckSync.syncError {
+            Text(error)
+              .font(.caption)
+              .foregroundStyle(.red)
+          }
+        }
+
         Section("Health Data") {
           LabeledContent("HealthKit Access") {
             Text(healthKitManager.isAuthorized ? "Granted" : "Not granted")
               .foregroundStyle(healthKitManager.isAuthorized ? .green : .red)
               .font(.subheadline)
           }
-          Toggle("Auto-Refresh", isOn: $autoRefresh)
         }
 
         Section("About") {
-          LabeledContent("Version", value: "0.1.0")
-          LabeledContent("Phase", value: "MVP")
+          LabeledContent("Version", value: "1.0")
+          LabeledContent("Build", value: "8")
         }
       }
       .navigationTitle("Settings")
+      .onAppear { ckSync.checkAccount() }
+    }
+  }
+}
+
+extension CKAccountStatus {
+  var label: String {
+    switch self {
+    case .available:              return "Signed In"
+    case .noAccount:              return "No Account"
+    case .restricted:             return "Restricted"
+    case .couldNotDetermine:      return "Unknown"
+    case .temporarilyUnavailable: return "Temporarily Unavailable"
+    @unknown default:             return "Unknown"
     }
   }
 }

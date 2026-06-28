@@ -3,6 +3,18 @@ import SwiftUI
 import Combine
 import CoreLocation
 
+struct KmSplit: Identifiable {
+  let id = UUID()
+  let number: Int
+  let paceSeconds: TimeInterval  // seconds per km
+
+  var paceString: String {
+    let m = Int(paceSeconds) / 60
+    let s = Int(paceSeconds) % 60
+    return String(format: "%d:%02d /km", m, s)
+  }
+}
+
 class HealthKitManager: NSObject, ObservableObject {
   // MARK: - Daily metrics
   @Published var heartRate: Double = 0
@@ -11,14 +23,18 @@ class HealthKitManager: NSObject, ObservableObject {
   @Published var calories: Double = 0
   @Published var isAuthorized = false
 
-  // MARK: - Hike map
+  // MARK: - Workout history
   @Published var recentWorkouts: [HKWorkout] = []
   @Published var selectedWorkout: HKWorkout?
-  @Published var routeCoordinates: [CLLocationCoordinate2D] = []
-  @Published var routeElevationGain: Double = 0
-  @Published var isLoadingRoute = false
   @Published var isFetchingWorkouts = false
   @Published var hasMoreWorkouts = true
+
+  // MARK: - Selected workout route + stats
+  @Published var routeCoordinates: [CLLocationCoordinate2D] = []
+  @Published var elevationProfile: [Double] = []   // altitude in metres, sampled
+  @Published var kmSplits: [KmSplit] = []
+  @Published var routeElevationGain: Double = 0
+  @Published var isLoadingRoute = false
 
   // MARK: - Live observation (any active workout — Fitness app, our app, etc.)
   @Published var isLiveSessionActive = false
@@ -135,19 +151,11 @@ class HealthKitManager: NSObject, ObservableObject {
     isFetchingWorkouts = true
     let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
 
-    let activityPredicate = NSCompoundPredicate(orPredicateWithSubpredicates: [
-      HKQuery.predicateForWorkouts(with: .hiking),
-      HKQuery.predicateForWorkouts(with: .walking),
-      HKQuery.predicateForWorkouts(with: .running),
-      HKQuery.predicateForWorkouts(with: .cycling),
-    ])
-
     let predicate: NSPredicate
     if let cursor = workoutPageCursor {
-      let datePredicate = HKQuery.predicateForSamples(withStart: .distantPast, end: cursor)
-      predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [datePredicate, activityPredicate])
+      predicate = HKQuery.predicateForSamples(withStart: .distantPast, end: cursor)
     } else {
-      predicate = activityPredicate
+      predicate = HKQuery.predicateForSamples(withStart: .distantPast, end: Date())
     }
 
     let query = HKSampleQuery(
@@ -235,6 +243,8 @@ class HealthKitManager: NSObject, ObservableObject {
   func selectWorkout(_ workout: HKWorkout) {
     selectedWorkout = workout
     routeCoordinates = []
+    elevationProfile = []
+    kmSplits = []
     routeElevationGain = 0
     isLoadingRoute = true
     fetchRouteForWorkout(workout)
@@ -262,11 +272,15 @@ class HealthKitManager: NSObject, ObservableObject {
     let query = HKWorkoutRouteQuery(route: route) { [weak self] _, locations, done, _ in
       if let locations { accumulated.append(contentsOf: locations) }
       if done {
-        let gain = Self.calculateElevationGain(from: accumulated)
+        let gain   = Self.calculateElevationGain(from: accumulated)
+        let profile = Self.sampleElevationProfile(from: accumulated, maxPoints: 200)
+        let splits  = Self.calculateKmSplits(from: accumulated)
         DispatchQueue.main.async {
-          self?.routeCoordinates = accumulated.map(\.coordinate)
+          self?.routeCoordinates  = accumulated.map(\.coordinate)
+          self?.elevationProfile  = profile
+          self?.kmSplits          = splits
           self?.routeElevationGain = gain
-          self?.isLoadingRoute = false
+          self?.isLoadingRoute    = false
         }
       }
     }
@@ -280,6 +294,33 @@ class HealthKitManager: NSObject, ObservableObject {
       if delta > 0 { gain += delta }
     }
     return gain
+  }
+
+  private static func sampleElevationProfile(from locations: [CLLocation], maxPoints: Int) -> [Double] {
+    guard !locations.isEmpty else { return [] }
+    let step = max(1, locations.count / maxPoints)
+    return stride(from: 0, to: locations.count, by: step).map { locations[$0].altitude }
+  }
+
+  private static func calculateKmSplits(from locations: [CLLocation]) -> [KmSplit] {
+    guard locations.count > 1 else { return [] }
+    var splits: [KmSplit] = []
+    var kmStart = locations[0]
+    var kmDist  = 0.0
+    var kmNum   = 1
+
+    for i in 1..<locations.count {
+      let d = locations[i].distance(from: locations[i - 1])
+      kmDist += d
+      if kmDist >= 1000 {
+        let elapsed = locations[i].timestamp.timeIntervalSince(kmStart.timestamp)
+        splits.append(KmSplit(number: kmNum, paceSeconds: elapsed))
+        kmStart = locations[i]
+        kmDist  = 0
+        kmNum  += 1
+      }
+    }
+    return splits
   }
 
   // MARK: - Helpers

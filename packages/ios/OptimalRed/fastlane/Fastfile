@@ -20,17 +20,18 @@ platform :ios do
   desc "Build archive (no upload)"
   lane :build do
     gym(
-      workspace:     "OptimalRed.xcworkspace",
-      scheme:        "OptimalRed",
-      configuration: "Release",
-      export_method: "app-store",
+      workspace:                  "OptimalRed.xcworkspace",
+      scheme:                     "OptimalRed",
+      configuration:              "Release",
+      export_method:              "app-store",
       export_options: {
         signingStyle:      "automatic",
         stripSwiftSymbols: true
       },
       output_directory: "build",
       output_name:      "OptimalRed.ipa",
-      clean:            true
+      clean:            true,
+      xcargs:           "-allowProvisioningUpdates"
     )
     UI.success "✅ Build complete: build/OptimalRed.ipa"
   end
