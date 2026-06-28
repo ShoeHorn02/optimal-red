@@ -11,14 +11,34 @@ struct OptimalRedApp: App {
   let modelContainer: ModelContainer
 
   init() {
-    do {
-      modelContainer = try ModelContainer(
-        for: StoredHealthMetric.self,
-        configurations: ModelConfiguration(isStoredInMemoryOnly: false)
-      )
-    } catch {
-      fatalError("Could not initialize ModelContainer: \(error)")
+    let schema = Schema([StoredHealthMetric.self])
+    // cloudKitDatabase: .none — we use our own CloudKitSyncService; SwiftData stays local
+    let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false, cloudKitDatabase: .none)
+
+    if let container = try? ModelContainer(for: schema, configurations: config) {
+      modelContainer = container
+      return
     }
+
+    // Store corrupted or old schema — wipe every file whose name starts with "default.store"
+    if let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first,
+       let files = try? FileManager.default.contentsOfDirectory(at: appSupport, includingPropertiesForKeys: nil) {
+      for file in files where file.lastPathComponent.hasPrefix("default.store") {
+        try? FileManager.default.removeItem(at: file)
+      }
+    }
+
+    // Second attempt after wipe
+    if let container = try? ModelContainer(for: schema, configurations: config) {
+      modelContainer = container
+      return
+    }
+
+    // Last resort: in-memory (data comes from HealthKit anyway)
+    modelContainer = try! ModelContainer(
+      for: schema,
+      configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+    )
   }
 
   var body: some Scene {

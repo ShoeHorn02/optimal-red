@@ -17,21 +17,38 @@ platform :ios do
     increment_build_number(xcodeproj: "OptimalRed.xcodeproj")
   end
 
+  desc "Fetch/create distribution cert and provisioning profile via ASC API"
+  lane :sync_certs do
+    key = app_store_connect_api_key(
+      key_id:       ENV["ASC_KEY_ID"],
+      issuer_id:    ENV["ASC_ISSUER_ID"],
+      key_filepath: ENV["ASC_KEY_PATH"],
+      duration:     1200,
+      in_house:     false
+    )
+    get_certificates(api_key: key, platform: "ios")
+    get_provisioning_profile(
+      api_key:        key,
+      app_identifier: "app.optimalred.ios",
+      force:          true
+    )
+  end
+
   desc "Build archive (no upload)"
   lane :build do
+    sync_certs
     gym(
-      workspace:                  "OptimalRed.xcworkspace",
-      scheme:                     "OptimalRed",
-      configuration:              "Release",
-      export_method:              "app-store",
+      workspace:     "OptimalRed.xcworkspace",
+      scheme:        "OptimalRed",
+      configuration: "Release",
+      export_method: "app-store",
       export_options: {
         signingStyle:      "automatic",
         stripSwiftSymbols: true
       },
       output_directory: "build",
       output_name:      "OptimalRed.ipa",
-      clean:            true,
-      xcargs:           "-allowProvisioningUpdates"
+      clean:            true
     )
     UI.success "✅ Build complete: build/OptimalRed.ipa"
   end

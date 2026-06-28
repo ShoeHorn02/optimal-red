@@ -105,7 +105,7 @@ class CloudKitSyncService: ObservableObject {
 // MARK: - CKRecord ↔ HKWorkout
 
 extension CKRecord {
-  convenience init(workout: HKWorkout) {
+  nonisolated convenience init(workout: HKWorkout) {
     let id = CKRecord.ID(recordName: workout.uuid.uuidString)
     self.init(recordType: "WorkoutRecord", recordID: id)
 
