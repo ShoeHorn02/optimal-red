@@ -6,6 +6,8 @@
 	<array>
 		<string>remote-notification</string>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Optimal Red shows your activity routes on the map.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Optimal Red needs access to your health data to track heart rate, distance, elevation, and calories from your Apple Watch.</string>
 	<key>NSHealthUpdateUsageDescription</key>

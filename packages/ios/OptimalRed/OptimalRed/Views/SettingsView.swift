@@ -3,55 +3,36 @@ import SwiftUI
 struct SettingsView: View {
   @EnvironmentObject var healthKitManager: HealthKitManager
   @EnvironmentObject var watchConnectivityManager: WatchConnectivityManager
-  @State private var enableCloudSync = false
   @State private var autoRefresh = true
 
   var body: some View {
     NavigationStack {
-      Form {
-        Section("Health Data") {
-          HStack {
-            Text("HealthKit Access")
-            Spacer()
-            Text(healthKitManager.isAuthorized ? "Granted" : "Denied")
-              .foregroundColor(healthKitManager.isAuthorized ? .green : .red)
-          }
-        }
-
-        Section("Watch Connection") {
-          HStack {
-            Text("Status")
-            Spacer()
-            HStack(spacing: 4) {
-              Image(systemName: "circle.fill")
-                .font(.caption)
-                .foregroundColor(watchConnectivityManager.isConnected ? .green : .gray)
+      List {
+        Section("Watch") {
+          LabeledContent("Status") {
+            HStack(spacing: 6) {
+              Circle()
+                .fill(watchConnectivityManager.isConnected ? Color.green : Color(.systemGray3))
+                .frame(width: 8, height: 8)
               Text(watchConnectivityManager.isConnected ? "Connected" : "Disconnected")
-                .font(.caption)
+                .foregroundStyle(watchConnectivityManager.isConnected ? .primary : .secondary)
+                .font(.subheadline)
             }
           }
         }
 
-        Section("Sync Settings") {
+        Section("Health Data") {
+          LabeledContent("HealthKit Access") {
+            Text(healthKitManager.isAuthorized ? "Granted" : "Not granted")
+              .foregroundStyle(healthKitManager.isAuthorized ? .green : .red)
+              .font(.subheadline)
+          }
           Toggle("Auto-Refresh", isOn: $autoRefresh)
-          Toggle("Enable Cloud Sync", isOn: $enableCloudSync)
         }
 
         Section("About") {
-          HStack {
-            Text("Version")
-            Spacer()
-            Text("0.0.1")
-              .foregroundColor(.gray)
-          }
-
-          HStack {
-            Text("Bundle ID")
-            Spacer()
-            Text("app.optimalred.ios")
-              .font(.caption)
-              .foregroundColor(.gray)
-          }
+          LabeledContent("Version", value: "0.1.0")
+          LabeledContent("Phase", value: "MVP")
         }
       }
       .navigationTitle("Settings")

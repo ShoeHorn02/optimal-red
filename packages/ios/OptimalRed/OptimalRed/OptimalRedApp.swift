@@ -22,23 +22,19 @@ struct OptimalRedApp: App {
     WindowGroup {
       TabView {
         MetricsView()
-          .environmentObject(healthKitManager)
-          .environmentObject(watchConnectivityManager)
-          .tabItem {
-            Label("Today", systemImage: "heart.fill")
-          }
+          .tabItem { Label("Today", systemImage: "heart.fill") }
+
+        MapRouteView()
+          .tabItem { Label("Map", systemImage: "map.fill") }
 
         HistoryView()
-          .modelContainer(modelContainer)
-          .tabItem {
-            Label("History", systemImage: "chart.bar.fill")
-          }
+          .tabItem { Label("History", systemImage: "chart.bar.fill") }
 
         SettingsView()
-          .tabItem {
-            Label("Settings", systemImage: "gear")
-          }
+          .tabItem { Label("Settings", systemImage: "gear") }
       }
+      .environmentObject(healthKitManager)
+      .environmentObject(watchConnectivityManager)
     }
     .modelContainer(modelContainer)
   }
