@@ -1,5 +1,6 @@
 import WatchConnectivity
 import SwiftUI
+import Combine
 
 class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
   @Published var isConnected = false
@@ -51,18 +52,6 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     }
     if let error = error {
       print("WCSession activation error: \(error.localizedDescription)")
-    }
-  }
-
-  func sessionDidBecomeInactive(_: WCSession) {
-    DispatchQueue.main.async {
-      self.isConnected = false
-    }
-  }
-
-  func sessionDidDeactivate(_: WCSession) {
-    DispatchQueue.main.async {
-      self.isConnected = false
     }
   }
 }
