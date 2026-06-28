@@ -273,7 +273,7 @@ struct WorkoutChip: View {
     }
     .padding(.horizontal, 12)
     .padding(.vertical, 8)
-    .background(isSelected ? Color.red : Color(UIColor.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
+    .background(isSelected ? Color.red : Color.secondary.opacity(0.15), in: RoundedRectangle(cornerRadius: 10))
     .animation(.easeInOut(duration: 0.15), value: isSelected)
   }
 
