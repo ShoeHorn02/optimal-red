@@ -146,7 +146,7 @@ struct MapRouteView: View {
       )
       Divider().frame(height: 44)
       statCell(
-        value: String(format: "%.0f", workout.totalEnergyBurned?.doubleValue(for: .kilocalorie()) ?? 0),
+        value: String(format: "%.0f", workout.statistics(for: HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!)?.sumQuantity()?.doubleValue(for: .kilocalorie()) ?? 0),
         unit: "kcal",
         label: "Calories",
         icon: "flame.fill",

@@ -1,46 +1,31 @@
 default_platform(:ios)
 
-# Usage:
-#   fastlane build          — archive locally (no upload)
-#   fastlane beta           — build + upload to TestFlight
-#   fastlane bump_build     — increment build number only
-#
-# Required env vars (set in .env.local or export):
-#   ASC_KEY_ID      — App Store Connect API Key ID
-#   ASC_ISSUER_ID   — App Store Connect Issuer ID
-#   ASC_KEY_PATH    — Path to the .p8 key file (e.g. ~/AuthKey_XXXXXX.p8)
-#   TEAM_ID         — Apple Developer Team ID (10-char string)
-#   ITC_TEAM_ID     — App Store Connect Team ID (numeric)
+# Load .env.local if present (fastlane may not auto-load in all contexts)
+env_file = File.join(File.dirname(__FILE__), ".env.local")
+if File.exist?(env_file)
+  File.readlines(env_file).each do |line|
+    line = line.strip
+    next if line.empty? || line.start_with?("#")
+    key, val = line.split("=", 2)
+    ENV[key] ||= val.to_s.gsub(/^~/, Dir.home) if key
+  end
+end
 
 platform :ios do
-  before_all do
-    if ENV["ASC_KEY_ID"] && ENV["ASC_ISSUER_ID"] && ENV["ASC_KEY_PATH"]
-      app_store_connect_api_key(
-        key_id:       ENV["ASC_KEY_ID"],
-        issuer_id:    ENV["ASC_ISSUER_ID"],
-        key_filepath: File.expand_path(ENV["ASC_KEY_PATH"]),
-        duration:     1200,
-        in_house:     false
-      )
-    end
-  end
-
   desc "Increment build number"
   lane :bump_build do
-    increment_build_number(
-      xcodeproj: "OptimalRed.xcodeproj"
-    )
+    increment_build_number(xcodeproj: "OptimalRed.xcodeproj")
   end
 
   desc "Build archive (no upload)"
   lane :build do
     gym(
-      project:      "OptimalRed.xcodeproj",
-      scheme:       "OptimalRed",
+      project:       "OptimalRed.xcodeproj",
+      scheme:        "OptimalRed",
       configuration: "Release",
       export_method: "app-store",
       export_options: {
-        signingStyle: "automatic",
+        signingStyle:      "automatic",
         stripSwiftSymbols: true
       },
       output_directory: "build",
@@ -54,10 +39,20 @@ platform :ios do
   lane :beta do
     bump_build
     build
+
+    key = app_store_connect_api_key(
+      key_id:       ENV["ASC_KEY_ID"],
+      issuer_id:    ENV["ASC_ISSUER_ID"],
+      key_filepath: ENV["ASC_KEY_PATH"],
+      duration:     1200,
+      in_house:     false
+    )
+
     upload_to_testflight(
-      ipa:                            "build/OptimalRed.ipa",
+      api_key:                           key,
+      ipa:                               "build/OptimalRed.ipa",
       skip_waiting_for_build_processing: true,
-      changelog:                      "Latest build from Optimal Red CI"
+      changelog:                         "Latest build from Optimal Red CI"
     )
     UI.success "🚀 Uploaded to TestFlight"
   end
