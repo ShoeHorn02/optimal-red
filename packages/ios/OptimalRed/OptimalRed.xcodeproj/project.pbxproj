@@ -21,14 +21,6 @@
 			remoteGlobalIDString = 5F68DE172FF0D252005A8E07;
 			remoteInfo = OptimalRed;
 		};
-
-		AA110000000000000000AA03 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = AA110000000000000000AA01 /* OptimalRedWatch.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = 5F1B607D2FF0D31C00856BA1;
-			remoteInfo = "OptimalRedWatch Watch App";
-		};
 		AA110000000000000000AA05 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = AA110000000000000000AA01 /* OptimalRedWatch.xcodeproj */;
@@ -38,12 +30,24 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		AA110000000000000000AA08 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		5F68DE182FF0D252005A8E07 /* OptimalRed.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OptimalRed.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5F68DE292FF0D254005A8E07 /* OptimalRedTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OptimalRedTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		5F68DE332FF0D254005A8E07 /* OptimalRedUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OptimalRedUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-
-		AA110000000000000000AA01 /* OptimalRedWatch.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = OptimalRedWatch.xcodeproj; path = "../../watchos/OptimalRedWatch/OptimalRedWatch.xcodeproj"; sourceTree = "<group>"; };
+		AA110000000000000000AA01 /* OptimalRedWatch.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = OptimalRedWatch.xcodeproj; path = ../../watchos/OptimalRedWatch/OptimalRedWatch.xcodeproj; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -76,20 +80,6 @@
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
-
-/* Begin PBXCopyFilesBuildPhase section */
-		AA110000000000000000AA08 /* Embed Watch Content */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
-			dstSubfolderSpec = 16;
-			files = (
-				AA110000000000000000AA07 /* OptimalRedWatch Watch App.app in Embed Watch Content */,
-			);
-			name = "Embed Watch Content";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		5F68DE152FF0D252005A8E07 /* Frameworks */ = {
@@ -137,11 +127,9 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-
 		AA110000000000000000AA02 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				AA110000000000000000AA04 /* OptimalRedWatch Watch App.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -251,15 +239,15 @@
 			);
 			mainGroup = 5F68DE0F2FF0D252005A8E07;
 			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 5F68DE192FF0D252005A8E07 /* Products */;
+			projectDirPath = "";
 			projectReferences = (
 				{
 					ProductGroup = AA110000000000000000AA02 /* Products */;
 					ProjectRef = AA110000000000000000AA01 /* OptimalRedWatch.xcodeproj */;
 				},
 			);
-			preferredProjectObjectVersion = 77;
-			productRefGroup = 5F68DE192FF0D252005A8E07 /* Products */;
-			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				5F68DE172FF0D252005A8E07 /* OptimalRed */,
@@ -268,16 +256,6 @@
 			);
 		};
 /* End PBXProject section */
-
-/* Begin PBXReferenceProxy section */
-		AA110000000000000000AA04 /* OptimalRedWatch Watch App.app */ = {
-			isa = PBXReferenceProxy;
-			fileType = wrapper.application;
-			path = "OptimalRedWatch Watch App.app";
-			remoteRef = AA110000000000000000AA03 /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-/* End PBXReferenceProxy section */
 
 /* Begin PBXResourcesBuildPhase section */
 		5F68DE162FF0D252005A8E07 /* Resources */ = {
@@ -338,7 +316,6 @@
 			target = 5F68DE172FF0D252005A8E07 /* OptimalRed */;
 			targetProxy = 5F68DE342FF0D254005A8E07 /* PBXContainerItemProxy */;
 		};
-
 		AA110000000000000000AA06 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = "OptimalRedWatch Watch App";
@@ -354,7 +331,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = OptimalRed/OptimalRed.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = 6XYMR8VRKR;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -388,7 +365,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = OptimalRed/OptimalRed.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = 6XYMR8VRKR;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -541,7 +518,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = 6XYMR8VRKR;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
@@ -563,7 +540,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = 6XYMR8VRKR;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
@@ -584,7 +561,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = 6XYMR8VRKR;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
@@ -604,7 +581,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = 6XYMR8VRKR;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
