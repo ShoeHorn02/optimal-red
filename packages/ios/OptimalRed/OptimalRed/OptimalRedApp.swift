@@ -56,6 +56,7 @@ struct OptimalRedApp: App {
         SettingsView()
           .tabItem { Label("Settings", systemImage: "gear") }
       }
+      .preferredColorScheme(.dark)
       .environmentObject(healthKitManager)
       .environmentObject(watchConnectivityManager)
       .environmentObject(recordingManager)

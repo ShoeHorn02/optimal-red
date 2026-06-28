@@ -48,17 +48,39 @@ struct HistoryView: View {
         .padding(.top, 8)
         .padding(.bottom, 14)
 
-        // ── Filter chips ────────────────────────────────────────
-        ScrollView(.horizontal, showsIndicators: false) {
-          HStack(spacing: 8) {
-            FilterPill(label: "All", active: typeFilter == nil) { typeFilter = nil }
-            ForEach(uniqueTypes, id: \.rawValue) { t in
-              FilterPill(label: t.displayName, active: typeFilter == t) { typeFilter = t }
+        // ── Filter dropdown ─────────────────────────────────────
+        HStack {
+          Menu {
+            Button { typeFilter = nil } label: {
+              HStack {
+                Text("All Workouts")
+                if typeFilter == nil { Image(systemName: "checkmark") }
+              }
             }
+            Divider()
+            ForEach(uniqueTypes, id: \.rawValue) { t in
+              Button { typeFilter = t } label: {
+                HStack {
+                  Text(t.displayName)
+                  if typeFilter == t { Image(systemName: "checkmark") }
+                }
+              }
+            }
+          } label: {
+            HStack(spacing: 6) {
+              Text(typeFilter?.displayName ?? "All Workouts")
+                .font(.subheadline.weight(.semibold))
+              Image(systemName: "chevron.down")
+                .font(.caption.weight(.bold))
+            }
+            .foregroundStyle(.black)
+            .padding(.horizontal, 16).padding(.vertical, 9)
+            .background(accentGreen, in: Capsule())
           }
-          .padding(.horizontal, 20)
+          Spacer()
         }
-        .padding(.bottom, 6)
+        .padding(.horizontal, 20)
+        .padding(.bottom, 8)
 
         // ── Content ─────────────────────────────────────────────
         if filtered.isEmpty && !healthKitManager.isFetchingWorkouts {
@@ -127,25 +149,6 @@ struct HistoryView: View {
         .padding(.horizontal, 40)
     }
     .frame(maxWidth: .infinity)
-  }
-}
-
-// MARK: - Filter pill
-
-struct FilterPill: View {
-  let label: String
-  let active: Bool
-  let action: () -> Void
-
-  var body: some View {
-    Button(action: action) {
-      Text(label)
-        .font(.subheadline.weight(.semibold))
-        .foregroundStyle(active ? .black : .white)
-        .padding(.horizontal, 16).padding(.vertical, 8)
-        .background(active ? accentGreen : Color(white: 0.22), in: Capsule())
-    }
-    .buttonStyle(.plain)
   }
 }
 

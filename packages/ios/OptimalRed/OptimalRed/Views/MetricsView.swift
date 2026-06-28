@@ -8,8 +8,10 @@ struct MetricsView: View {
 
   var body: some View {
     NavigationStack {
-      ScrollView {
-        VStack(spacing: 20) {
+      ZStack {
+        Color.black.ignoresSafeArea()
+        ScrollView {
+          VStack(spacing: 20) {
           if let workout = lastWorkout {
             lastWorkoutHero(workout)
           } else if healthKitManager.isFetchingWorkouts {
@@ -24,6 +26,7 @@ struct MetricsView: View {
         }
         .padding()
       }
+      }
       .navigationTitle("Activity")
       .toolbar {
         ToolbarItem(placement: .navigationBarTrailing) {
@@ -35,6 +38,8 @@ struct MetricsView: View {
           }
         }
       }
+      .toolbarBackground(.black, for: .navigationBar)
+      .toolbarColorScheme(.dark, for: .navigationBar)
       .onAppear {
         healthKitManager.requestAuthorization()
         healthKitManager.startHealthKitUpdates()
@@ -102,12 +107,12 @@ struct MetricsView: View {
       }
       .padding(.vertical, 12)
     }
-    .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 20))
+    .background(Color(white: 0.12), in: RoundedRectangle(cornerRadius: 20))
   }
 
   private var heroDivider: some View {
     Rectangle()
-      .fill(Color(.separator).opacity(0.5))
+      .fill(Color(white: 0.22))
       .frame(width: 1, height: 36)
   }
 
@@ -240,7 +245,7 @@ struct SmallMetricCard: View {
 
   var body: some View {
     RoundedRectangle(cornerRadius: 16)
-      .fill(Color(.secondarySystemBackground))
+      .fill(Color(white: 0.12))
       .frame(height: 110)
       .overlay(
         VStack(alignment: .leading, spacing: 0) {

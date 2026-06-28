@@ -20,6 +20,7 @@ struct SettingsView: View {
                 .font(.subheadline)
             }
           }
+          .listRowBackground(Color(white: 0.12))
         }
 
         Section("iCloud Sync") {
@@ -57,6 +58,7 @@ struct SettingsView: View {
               .foregroundStyle(.red)
           }
         }
+        .listRowBackground(Color(white: 0.12))
 
         Section("Health Data") {
           LabeledContent("HealthKit Access") {
@@ -64,16 +66,23 @@ struct SettingsView: View {
               .foregroundStyle(healthKitManager.isAuthorized ? .green : .red)
               .font(.subheadline)
           }
+          .listRowBackground(Color(white: 0.12))
         }
 
         Section("About") {
           LabeledContent("Version", value: "1.0")
-          LabeledContent("Build", value: "8")
+          LabeledContent("Build", value: "16")
         }
+        .listRowBackground(Color(white: 0.12))
       }
+      .scrollContentBackground(.hidden)
+      .background(Color.black)
       .navigationTitle("Settings")
+      .toolbarBackground(.black, for: .navigationBar)
+      .toolbarColorScheme(.dark, for: .navigationBar)
       .onAppear { ckSync.checkAccount() }
     }
+    .background(Color.black)
   }
 }
 
