@@ -158,61 +158,68 @@ Mac + Web Dashboard
 
 ## Apple Developer Console Setup (Required Before Building)
 
-### 1. Register Bundle IDs
+### 1. Register Bundle IDs (✅ COMPLETED)
 In [App Store Connect](https://appstoreconnect.apple.com/):
 
 Go to **Certificates, Identifiers & Profiles** → **Identifiers**:
 
-1. **Create App ID for iPhone**:
+1. **✅ App ID for iPhone**:
    - Type: App
    - Description: Optimal Red iOS
    - Bundle ID: `app.optimalred.ios` (Explicit)
-   - Capabilities:
-     - ✅ HealthKit
-     - ✅ Sign in with Apple
-     - ✅ iCloud (CloudKit - for Phase 1+)
+   - Capabilities: HealthKit, Sign in with Apple, iCloud
 
-2. **Create App ID for Watch**:
+2. **✅ App ID for Watch**:
    - Type: App
    - Description: Optimal Red watchOS
    - Bundle ID: `app.optimalred.watchos` (Explicit)
-   - Capabilities:
-     - ✅ HealthKit
-     - ✅ WatchConnectivity
+   - Capabilities: HealthKit
 
-3. **Create App ID for WatchKit Extension**:
+3. **✅ App ID for WatchKit Extension**:
    - Type: App Clip
    - Description: Optimal Red WatchKit
    - Bundle ID: `app.optimalred.watchos.watchkit` (Explicit)
-   - Capabilities:
-     - ✅ HealthKit
-     - ✅ WatchConnectivity
+   - Capabilities: HealthKit
 
-### 2. Create Provisioning Profiles
+4. **✅ App ID for macOS** (Phase 2):
+   - Type: App
+   - Description: Optimal Red macOS
+   - Bundle ID: `app.optimalred.macos` (Explicit)
+   - Capabilities: Sign in with Apple, iCloud
+   - Note: No HealthKit - Mac app only reads from backend, doesn't record
+
+### 2. Create Provisioning Profiles (NEXT)
 In **Certificates, Identifiers & Profiles** → **Provisioning Profiles**:
 
 1. **iOS Development Profile**:
    - Type: Development
    - App ID: app.optimalred.ios
    - Certificate: Select your developer cert
-   - Devices: Select your test devices
+   - Devices: Select your test iPhone devices
    - Name: "Optimal Red iOS Dev"
 
 2. **watchOS Development Profile**:
    - Type: Development
    - App ID: app.optimalred.watchos
    - Certificate: Select your developer cert
-   - Devices: Select your test watches
+   - Devices: Select your test Apple Watches
    - Name: "Optimal Red watchOS Dev"
 
 3. **WatchKit Extension Development Profile**:
    - Type: Development
    - App ID: app.optimalred.watchos.watchkit
    - Certificate: Select your developer cert
-   - Devices: Select your test watches
+   - Devices: Select your test Apple Watches
    - Name: "Optimal Red WatchKit Dev"
 
-**Download all 3 profiles and import into Xcode**.
+4. **macOS Development Profile** (Phase 2):
+   - Type: Development
+   - App ID: app.optimalred.macos
+   - Certificate: Select your developer cert
+   - Devices: Select your test Mac devices
+   - Name: "Optimal Red macOS Dev"
+
+**Download all 4 profiles and import into Xcode**.
 
 ### 3. In Xcode (After Creating Projects)
 - Set Team ID for both projects (Xcode → Preferences → Accounts → Team ID)
@@ -232,12 +239,13 @@ In Xcode Info.plist for both Watch & iPhone:
 ```
 
 ### Checklist Before Building
-- [ ] Created app.optimalred.ios Bundle ID
-- [ ] Created app.optimalred.watchos Bundle ID
-- [ ] Created app.optimalred.watchos.watchkit Bundle ID
-- [ ] Enabled HealthKit on all 3
-- [ ] Created 3 development provisioning profiles
-- [ ] Downloaded and imported profiles to Xcode
+- [x] Created app.optimalred.ios Bundle ID (iPhone - HealthKit, Sign in with Apple, iCloud)
+- [x] Created app.optimalred.watchos Bundle ID (Watch - HealthKit)
+- [x] Created app.optimalred.watchos.watchkit Bundle ID (WatchKit - HealthKit)
+- [x] Created app.optimalred.macos Bundle ID (Mac - Sign in with Apple, iCloud)
+- [x] Enabled HealthKit on iOS, watchOS, and WatchKit
+- [ ] Create 4 development provisioning profiles (iOS, watchOS, WatchKit, macOS)
+- [ ] Download and import profiles to Xcode
 - [ ] Set Team ID in Xcode projects
 - [ ] Added HealthKit to Info.plist
 
@@ -278,10 +286,11 @@ In Xcode Info.plist for both Watch & iPhone:
 
 ## Bundle IDs & App Identifiers
 
-### iOS Bundle IDs
-- **iPhone App**: `app.optimalred.ios`
-- **Watch Companion**: `app.optimalred.watchos`
-- **WatchKit Extension**: `app.optimalred.watchos.watchkit`
+### Registered Bundle IDs (✅ All Created)
+- **iPhone App**: `app.optimalred.ios` (HealthKit, Sign in with Apple, iCloud)
+- **Watch App**: `app.optimalred.watchos` (HealthKit)
+- **WatchKit Extension**: `app.optimalred.watchos.watchkit` (HealthKit)
+- **macOS App**: `app.optimalred.macos` (Sign in with Apple, iCloud) - Phase 2
 
 ### Backend Domain
 - **API**: `api.optimalred.app`
