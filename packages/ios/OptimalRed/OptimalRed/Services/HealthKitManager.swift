@@ -4,14 +4,23 @@ import Combine
 import CoreLocation
 
 class HealthKitManager: NSObject, ObservableObject {
+  // MARK: - Daily metrics
   @Published var heartRate: Double = 0
   @Published var distance: Double = 0
   @Published var elevation: Double = 0
   @Published var calories: Double = 0
   @Published var isAuthorized = false
+
+  // MARK: - Hike map
+  @Published var recentWorkouts: [HKWorkout] = []
+  @Published var selectedWorkout: HKWorkout?
   @Published var routeCoordinates: [CLLocationCoordinate2D] = []
+  @Published var routeElevationGain: Double = 0
+  @Published var isLoadingRoute = false
 
   private let healthStore = HKHealthStore()
+
+  // MARK: - Authorization
 
   func requestAuthorization() {
     guard HKHealthStore.isHealthDataAvailable() else { return }
@@ -33,15 +42,14 @@ class HealthKitManager: NSObject, ObservableObject {
     }
   }
 
+  // MARK: - Daily metrics
+
   func startHealthKitUpdates() {
     fetchHeartRate()
     fetchDailyDistance()
     fetchDailyElevation()
     fetchDailyCalories()
-    fetchTodayWorkoutRoute()
   }
-
-  // MARK: - Metrics
 
   private func fetchHeartRate() {
     guard let type = HKQuantityType.quantityType(forIdentifier: .heartRate) else { return }
@@ -63,8 +71,7 @@ class HealthKitManager: NSObject, ObservableObject {
 
   private func fetchDailyDistance() {
     guard let type = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning) else { return }
-    let predicate = todayPredicate()
-    let query = HKStatisticsQuery(quantityType: type, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, result, _ in
+    let query = HKStatisticsQuery(quantityType: type, quantitySamplePredicate: todayPredicate(), options: .cumulativeSum) { _, result, _ in
       DispatchQueue.main.async {
         if let sum = result?.sumQuantity() {
           self.distance = sum.doubleValue(for: .meter()) / 1000
@@ -98,23 +105,47 @@ class HealthKitManager: NSObject, ObservableObject {
     healthStore.execute(query)
   }
 
-  // MARK: - Workout Route
+  // MARK: - Hike workouts
 
-  func fetchTodayWorkoutRoute() {
+  func fetchRecentWorkouts() {
     let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
+    let thirtyDaysAgo = Date().addingTimeInterval(-30 * 24 * 3600)
+    let datePredicate = HKQuery.predicateForSamples(withStart: thirtyDaysAgo, end: Date())
+
+    let activityPredicate = NSCompoundPredicate(orPredicateWithSubpredicates: [
+      HKQuery.predicateForWorkouts(with: .hiking),
+      HKQuery.predicateForWorkouts(with: .walking),
+      HKQuery.predicateForWorkouts(with: .running),
+    ])
+
+    let combined = NSCompoundPredicate(andPredicateWithSubpredicates: [datePredicate, activityPredicate])
+
     let query = HKSampleQuery(
       sampleType: HKObjectType.workoutType(),
-      predicate: todayPredicate(),
-      limit: 1,
+      predicate: combined,
+      limit: 10,
       sortDescriptors: [sort]
     ) { [weak self] _, samples, _ in
-      guard let workout = samples?.first as? HKWorkout else { return }
-      self?.fetchRoute(for: workout)
+      let workouts = samples as? [HKWorkout] ?? []
+      DispatchQueue.main.async {
+        self?.recentWorkouts = workouts
+        if let first = workouts.first {
+          self?.selectWorkout(first)
+        }
+      }
     }
     healthStore.execute(query)
   }
 
-  private func fetchRoute(for workout: HKWorkout) {
+  func selectWorkout(_ workout: HKWorkout) {
+    selectedWorkout = workout
+    routeCoordinates = []
+    routeElevationGain = 0
+    isLoadingRoute = true
+    fetchRouteForWorkout(workout)
+  }
+
+  private func fetchRouteForWorkout(_ workout: HKWorkout) {
     let predicate = HKQuery.predicateForObjects(from: workout)
     let query = HKSampleQuery(
       sampleType: HKSeriesType.workoutRoute(),
@@ -122,7 +153,10 @@ class HealthKitManager: NSObject, ObservableObject {
       limit: 1,
       sortDescriptors: nil
     ) { [weak self] _, samples, _ in
-      guard let route = samples?.first as? HKWorkoutRoute else { return }
+      guard let route = samples?.first as? HKWorkoutRoute else {
+        DispatchQueue.main.async { self?.isLoadingRoute = false }
+        return
+      }
       self?.fetchLocations(from: route)
     }
     healthStore.execute(query)
@@ -133,12 +167,24 @@ class HealthKitManager: NSObject, ObservableObject {
     let query = HKWorkoutRouteQuery(route: route) { [weak self] _, locations, done, _ in
       if let locations { accumulated.append(contentsOf: locations) }
       if done {
+        let gain = Self.calculateElevationGain(from: accumulated)
         DispatchQueue.main.async {
           self?.routeCoordinates = accumulated.map(\.coordinate)
+          self?.routeElevationGain = gain
+          self?.isLoadingRoute = false
         }
       }
     }
     healthStore.execute(query)
+  }
+
+  private static func calculateElevationGain(from locations: [CLLocation]) -> Double {
+    var gain = 0.0
+    for i in 1..<locations.count {
+      let delta = locations[i].altitude - locations[i - 1].altitude
+      if delta > 0 { gain += delta }
+    }
+    return gain
   }
 
   // MARK: - Helpers
