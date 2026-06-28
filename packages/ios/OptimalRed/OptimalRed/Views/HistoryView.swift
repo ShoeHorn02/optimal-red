@@ -48,35 +48,20 @@ struct HistoryView: View {
         .padding(.top, 8)
         .padding(.bottom, 14)
 
-        // ── Filter dropdown ─────────────────────────────────────
+        // ── Filter picker ────────────────────────────────────────
         HStack {
-          Menu {
-            Button { typeFilter = nil } label: {
-              HStack {
-                Text("All Workouts")
-                if typeFilter == nil { Image(systemName: "checkmark") }
-              }
-            }
-            Divider()
+          Picker("Activity", selection: Binding(
+            get: { typeFilter?.rawValue ?? UInt.max },
+            set: { typeFilter = $0 == UInt.max ? nil : HKWorkoutActivityType(rawValue: $0) }
+          )) {
+            Text("All Workouts").tag(UInt.max)
             ForEach(uniqueTypes, id: \.rawValue) { t in
-              Button { typeFilter = t } label: {
-                HStack {
-                  Text(t.displayName)
-                  if typeFilter == t { Image(systemName: "checkmark") }
-                }
-              }
+              Text(t.displayName).tag(t.rawValue)
             }
-          } label: {
-            HStack(spacing: 6) {
-              Text(typeFilter?.displayName ?? "All Workouts")
-                .font(.subheadline.weight(.semibold))
-              Image(systemName: "chevron.down")
-                .font(.caption.weight(.bold))
-            }
-            .foregroundStyle(.black)
-            .padding(.horizontal, 16).padding(.vertical, 9)
-            .background(accentGreen, in: Capsule())
           }
+          .pickerStyle(.menu)
+          .tint(accentGreen)
+          .fontWeight(.semibold)
           Spacer()
         }
         .padding(.horizontal, 20)
