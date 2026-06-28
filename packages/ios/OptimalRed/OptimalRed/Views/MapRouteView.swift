@@ -3,10 +3,21 @@ import MapKit
 import HealthKit
 import Charts
 
+// Activity types that record GPS routes
+private let gpsActivityTypes: Set<HKWorkoutActivityType> = [
+  .hiking, .walking, .running, .cycling,
+  .crossCountrySkiing, .downhillSkiing, .snowboarding, .skatingSports,
+  .paddleSports, .rowing, .surfingSports, .waterFitness
+]
+
 struct MapRouteView: View {
   @EnvironmentObject var healthKitManager: HealthKitManager
   @State private var position: MapCameraPosition = .userLocation(fallback: .automatic)
   @State private var showingDetail = false
+
+  private var gpsWorkouts: [HKWorkout] {
+    healthKitManager.recentWorkouts.filter { gpsActivityTypes.contains($0.workoutActivityType) }
+  }
 
   var body: some View {
     ZStack(alignment: .bottom) {
@@ -32,6 +43,8 @@ struct MapRouteView: View {
     .onAppear {
       if healthKitManager.recentWorkouts.isEmpty {
         healthKitManager.fetchRecentWorkouts()
+      } else if gpsWorkouts.count < 3 && healthKitManager.hasMoreWorkouts {
+        healthKitManager.fetchMoreWorkouts()
       }
     }
     .onChange(of: healthKitManager.routeCoordinates.count) { _, _ in
@@ -70,15 +83,13 @@ struct MapRouteView: View {
           .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
       }
 
-      // No GPS data for this workout
-      if !healthKitManager.isLoadingRoute,
-         healthKitManager.selectedWorkout != nil,
-         healthKitManager.routeCoordinates.isEmpty {
+      // No workouts with GPS yet
+      if gpsWorkouts.isEmpty && !healthKitManager.isFetchingWorkouts {
         VStack(spacing: 8) {
           Image(systemName: "map.slash")
             .font(.system(size: 28))
             .foregroundStyle(.secondary)
-          Text("No GPS route saved")
+          Text("No GPS workouts found")
             .font(.subheadline)
             .foregroundStyle(.secondary)
         }
@@ -156,19 +167,19 @@ struct MapRouteView: View {
 
   private var workoutList: some View {
     VStack(spacing: 0) {
-      if healthKitManager.recentWorkouts.isEmpty && !healthKitManager.isFetchingWorkouts {
+      if gpsWorkouts.isEmpty && !healthKitManager.isFetchingWorkouts {
         emptyState
       } else {
         ScrollView(.horizontal, showsIndicators: false) {
           HStack(spacing: 10) {
-            ForEach(healthKitManager.recentWorkouts, id: \.uuid) { workout in
+            ForEach(gpsWorkouts, id: \.uuid) { workout in
               WorkoutChip(
                 workout: workout,
                 isSelected: healthKitManager.selectedWorkout?.uuid == workout.uuid
               )
               .onTapGesture { healthKitManager.selectWorkout(workout) }
               .onAppear {
-                if workout.uuid == healthKitManager.recentWorkouts.last?.uuid {
+                if workout.uuid == gpsWorkouts.last?.uuid {
                   healthKitManager.fetchMoreWorkouts()
                 }
               }

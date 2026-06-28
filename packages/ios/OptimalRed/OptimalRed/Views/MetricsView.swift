@@ -1,82 +1,35 @@
 import SwiftUI
+import HealthKit
 
 struct MetricsView: View {
   @EnvironmentObject var healthKitManager: HealthKitManager
-  @EnvironmentObject var watchConnectivityManager: WatchConnectivityManager
-  @EnvironmentObject var recordingManager: WorkoutRecordingManager
-  @State private var showingRecording = false
 
-  private var greeting: String {
-    let hour = Calendar.current.component(.hour, from: Date())
-    switch hour {
-    case 0..<12: return "Good morning"
-    case 12..<17: return "Good afternoon"
-    default: return "Good evening"
-    }
-  }
+  private var lastWorkout: HKWorkout? { healthKitManager.recentWorkouts.first }
 
   var body: some View {
     NavigationStack {
       ScrollView {
-        VStack(alignment: .leading, spacing: 20) {
-          watchStatusPill
-
-          HeartRateCard(heartRate: healthKitManager.heartRate)
-
-          LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            SmallMetricCard(label: "Distance",  value: String(format: "%.2f", healthKitManager.distance),  unit: "km",   icon: "figure.walk",     color: .blue)
-            SmallMetricCard(label: "Elevation", value: String(format: "%.0f", healthKitManager.elevation), unit: "m",    icon: "mountain.2.fill", color: .green)
-            SmallMetricCard(label: "Calories",  value: String(format: "%.0f", healthKitManager.calories),  unit: "kcal", icon: "flame.fill",      color: .orange)
+        VStack(spacing: 20) {
+          if let workout = lastWorkout {
+            lastWorkoutHero(workout)
+          } else if healthKitManager.isFetchingWorkouts {
+            ProgressView("Loading last workout…")
+              .frame(maxWidth: .infinity)
+              .padding(.top, 60)
+          } else {
+            noWorkoutState
           }
 
-          // Live session card (shows when Fitness app or any HK source is active)
-          if healthKitManager.isLiveSessionActive {
-            LiveSessionCard(
-              heartRate: healthKitManager.liveHeartRate,
-              distance: healthKitManager.liveDistance,
-              calories: healthKitManager.liveCalories
-            )
-          }
-
-          // Record button
-          Button {
-            showingRecording = true
-          } label: {
-            HStack {
-              Image(systemName: recordingManager.isRecording ? "waveform.circle.fill" : "record.circle")
-                .font(.title3)
-              Text(recordingManager.isRecording ? "Recording…" : "Record workout")
-                .font(.headline)
-              Spacer()
-              if recordingManager.isRecording {
-                Text(formatDuration(recordingManager.elapsedTime))
-                  .font(.subheadline.monospacedDigit())
-                  .foregroundStyle(.red)
-              }
-              Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            }
-            .padding()
-            .background(recordingManager.isRecording
-                        ? Color.red.opacity(0.12)
-                        : Color(.secondarySystemBackground),
-                        in: RoundedRectangle(cornerRadius: 16))
-            .overlay(
-              RoundedRectangle(cornerRadius: 16)
-                .stroke(recordingManager.isRecording ? Color.red.opacity(0.4) : Color.clear, lineWidth: 1)
-            )
-          }
-          .foregroundStyle(recordingManager.isRecording ? .red : .primary)
-          .buttonStyle(.plain)
+          todayStats
         }
         .padding()
       }
-      .navigationTitle(greeting)
+      .navigationTitle("Activity")
       .toolbar {
         ToolbarItem(placement: .navigationBarTrailing) {
           Button {
             healthKitManager.startHealthKitUpdates()
+            healthKitManager.fetchRecentWorkouts()
           } label: {
             Image(systemName: "arrow.clockwise")
           }
@@ -85,82 +38,81 @@ struct MetricsView: View {
       .onAppear {
         healthKitManager.requestAuthorization()
         healthKitManager.startHealthKitUpdates()
-        healthKitManager.startLiveObservation()
-        watchConnectivityManager.startWatchConnectivity()
-      }
-      .onDisappear {
-        healthKitManager.stopLiveObservation()
-      }
-      .sheet(isPresented: $showingRecording) {
-        RecordingView()
-      }
-      .onReceive(NotificationCenter.default.publisher(for: .startHike)) { _ in
-        showingRecording = true
-      }
-      .onReceive(NotificationCenter.default.publisher(for: .startWalk)) { _ in
-        showingRecording = true
+        if healthKitManager.recentWorkouts.isEmpty {
+          healthKitManager.fetchRecentWorkouts()
+        }
       }
     }
   }
 
-  private func formatDuration(_ t: TimeInterval) -> String {
-    let h = Int(t) / 3600
-    let m = (Int(t) % 3600) / 60
-    let s = Int(t) % 60
-    return h > 0
-      ? String(format: "%d:%02d:%02d", h, m, s)
-      : String(format: "%02d:%02d", m, s)
-  }
+  // MARK: - Last Workout Hero Card
 
-  private var watchStatusPill: some View {
-    HStack(spacing: 6) {
-      Circle()
-        .fill(watchConnectivityManager.isConnected ? Color.green : Color.secondary.opacity(0.5))
-        .frame(width: 7, height: 7)
-      Text(watchConnectivityManager.isConnected ? "Apple Watch connected" : "Apple Watch not found")
-        .font(.caption)
-        .foregroundStyle(.secondary)
-    }
-  }
-}
-
-// MARK: - Cards
-
-struct LiveSessionCard: View {
-  let heartRate: Double
-  let distance: Double
-  let calories: Double
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 10) {
-      HStack(spacing: 6) {
-        Circle()
-          .fill(.green)
-          .frame(width: 8, height: 8)
-          .opacity(0.9)
-        Text("Live session detected")
-          .font(.caption.weight(.semibold))
-          .foregroundStyle(.green)
+  private func lastWorkoutHero(_ workout: HKWorkout) -> some View {
+    VStack(alignment: .leading, spacing: 0) {
+      // Header
+      HStack {
+        ZStack {
+          Circle()
+            .fill(activityColor(workout).opacity(0.15))
+            .frame(width: 44, height: 44)
+          Image(systemName: activityIcon(workout))
+            .font(.system(size: 20, weight: .semibold))
+            .foregroundStyle(activityColor(workout))
+        }
+        VStack(alignment: .leading, spacing: 2) {
+          Text(workout.workoutActivityType.displayName)
+            .font(.title3.weight(.bold))
+          Text(relativeDate(workout.startDate))
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
         Spacer()
-        Text("from Health")
-          .font(.caption2)
+        Text(formatDuration(workout.duration))
+          .font(.title3.weight(.semibold).monospacedDigit())
           .foregroundStyle(.secondary)
       }
-      HStack(spacing: 0) {
-        liveCell(value: heartRate > 0 ? String(format: "%.0f", heartRate) : "–", unit: "BPM",  icon: "heart.fill",  color: .red)
-        Divider().frame(height: 36)
-        liveCell(value: String(format: "%.2f", distance), unit: "km",   icon: "figure.walk", color: .blue)
-        Divider().frame(height: 36)
-        liveCell(value: String(format: "%.0f", calories), unit: "kcal", icon: "flame.fill",  color: .orange)
+      .padding(.horizontal, 16)
+      .padding(.top, 16)
+      .padding(.bottom, 12)
+
+      Divider().padding(.horizontal, 16)
+
+      // Stats grid
+      LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 0) {
+        heroStat(
+          value: distanceString(workout),
+          unit: "km",
+          icon: "figure.walk",
+          color: .blue
+        )
+        heroDivider
+        heroStat(
+          value: caloriesString(workout),
+          unit: "kcal",
+          icon: "flame.fill",
+          color: .orange
+        )
+        heroDivider
+        heroStat(
+          value: avgHRString(workout),
+          unit: "BPM",
+          icon: "heart.fill",
+          color: .red
+        )
       }
+      .padding(.vertical, 12)
     }
-    .padding()
-    .background(.green.opacity(0.08), in: RoundedRectangle(cornerRadius: 16))
-    .overlay(RoundedRectangle(cornerRadius: 16).stroke(.green.opacity(0.25), lineWidth: 1))
+    .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 20))
   }
 
-  private func liveCell(value: String, unit: String, icon: String, color: Color) -> some View {
-    VStack(spacing: 2) {
+  private var heroDivider: some View {
+    Rectangle()
+      .fill(Color(.separator).opacity(0.5))
+      .frame(width: 1, height: 36)
+  }
+
+  private func heroStat(value: String, unit: String, icon: String, color: Color) -> some View {
+    VStack(spacing: 4) {
       Image(systemName: icon).font(.caption).foregroundStyle(color)
       HStack(alignment: .firstTextBaseline, spacing: 2) {
         Text(value).font(.subheadline.weight(.bold).monospacedDigit())
@@ -168,43 +120,116 @@ struct LiveSessionCard: View {
       }
     }
     .frame(maxWidth: .infinity)
-    .padding(.vertical, 6)
+  }
+
+  // MARK: - Today's quick stats
+
+  private var todayStats: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      Text("Today")
+        .font(.headline)
+        .padding(.horizontal, 2)
+
+      LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+        SmallMetricCard(
+          label: "Distance",
+          value: String(format: "%.2f", healthKitManager.distance),
+          unit: "km", icon: "figure.walk", color: .blue
+        )
+        SmallMetricCard(
+          label: "Elevation",
+          value: String(format: "%.0f", healthKitManager.elevation),
+          unit: "m", icon: "mountain.2.fill", color: .green
+        )
+        SmallMetricCard(
+          label: "Calories",
+          value: String(format: "%.0f", healthKitManager.calories),
+          unit: "kcal", icon: "flame.fill", color: .orange
+        )
+        SmallMetricCard(
+          label: "Heart Rate",
+          value: healthKitManager.heartRate > 0 ? String(format: "%.0f", healthKitManager.heartRate) : "–",
+          unit: "BPM", icon: "heart.fill", color: .red
+        )
+      }
+    }
+  }
+
+  // MARK: - Empty state
+
+  private var noWorkoutState: some View {
+    VStack(spacing: 12) {
+      Image(systemName: "figure.walk.circle")
+        .font(.system(size: 48))
+        .foregroundStyle(.quaternary)
+      Text("No recent workouts")
+        .font(.headline)
+      Text("Workouts from Apple Health will appear here.")
+        .font(.subheadline)
+        .foregroundStyle(.secondary)
+        .multilineTextAlignment(.center)
+    }
+    .frame(maxWidth: .infinity)
+    .padding(.vertical, 40)
+  }
+
+  // MARK: - Helpers
+
+  private func activityIcon(_ workout: HKWorkout) -> String {
+    switch workout.workoutActivityType {
+    case .hiking:   return "figure.hiking"
+    case .running:  return "figure.run"
+    case .cycling:  return "figure.outdoor.cycle"
+    case .swimming: return "figure.pool.swim"
+    case .traditionalStrengthTraining, .functionalStrengthTraining: return "dumbbell.fill"
+    case .yoga:     return "figure.yoga"
+    default:        return "figure.walk"
+    }
+  }
+
+  private func activityColor(_ workout: HKWorkout) -> Color {
+    switch workout.workoutActivityType {
+    case .hiking:   return .green
+    case .running:  return .orange
+    case .cycling:  return .blue
+    case .swimming: return .cyan
+    case .traditionalStrengthTraining, .functionalStrengthTraining: return .purple
+    case .yoga:     return .pink
+    default:        return .red
+    }
+  }
+
+  private func distanceString(_ w: HKWorkout) -> String {
+    let m = w.totalDistance?.doubleValue(for: .meter()) ?? 0
+    return m > 0 ? String(format: "%.2f", m / 1000) : "–"
+  }
+
+  private func caloriesString(_ w: HKWorkout) -> String {
+    let cal = w.statistics(for: HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!)?
+      .sumQuantity()?.doubleValue(for: .kilocalorie()) ?? 0
+    return cal > 0 ? String(format: "%.0f", cal) : "–"
+  }
+
+  private func avgHRString(_ w: HKWorkout) -> String {
+    let hr = w.statistics(for: HKQuantityType.quantityType(forIdentifier: .heartRate)!)?
+      .averageQuantity()?.doubleValue(for: HKUnit(from: "count/min")) ?? 0
+    return hr > 0 ? String(format: "%.0f", hr) : "–"
+  }
+
+  private func formatDuration(_ t: TimeInterval) -> String {
+    let h = Int(t) / 3600; let m = (Int(t) % 3600) / 60
+    return h > 0 ? "\(h)h \(m)m" : "\(m)m"
+  }
+
+  private func relativeDate(_ date: Date) -> String {
+    let cal = Calendar.current
+    if cal.isDateInToday(date)     { return "Today · \(date.formatted(.dateTime.hour().minute()))" }
+    if cal.isDateInYesterday(date) { return "Yesterday · \(date.formatted(.dateTime.hour().minute()))" }
+    return date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())
   }
 }
 
-struct HeartRateCard: View {
-  let heartRate: Double
-
-  var body: some View {
-    RoundedRectangle(cornerRadius: 20)
-      .fill(.red.gradient)
-      .frame(height: 150)
-      .overlay(
-        HStack {
-          VStack(alignment: .leading, spacing: 6) {
-            Label("Heart Rate", systemImage: "heart.fill")
-              .font(.subheadline.weight(.medium))
-              .foregroundStyle(.white.opacity(0.85))
-
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-              Text(heartRate > 0 ? String(format: "%.0f", heartRate) : "–")
-                .font(.system(size: 60, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-              Text("BPM")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.75))
-                .padding(.bottom, 4)
-            }
-          }
-          Spacer()
-          Image(systemName: "heart.fill")
-            .font(.system(size: 56))
-            .foregroundStyle(.white.opacity(0.12))
-        }
-        .padding(20)
-      )
-  }
-}
+// MARK: - Shared card components (used by MetricsView)
 
 struct SmallMetricCard: View {
   let label: String
@@ -216,27 +241,18 @@ struct SmallMetricCard: View {
   var body: some View {
     RoundedRectangle(cornerRadius: 16)
       .fill(Color(.secondarySystemBackground))
-      .frame(height: 120)
+      .frame(height: 110)
       .overlay(
         VStack(alignment: .leading, spacing: 0) {
           Image(systemName: icon)
             .font(.title2)
             .foregroundStyle(color)
-
           Spacer()
-
           HStack(alignment: .firstTextBaseline, spacing: 3) {
-            Text(value)
-              .font(.system(size: 26, weight: .bold, design: .rounded))
-            Text(unit)
-              .font(.caption)
-              .foregroundStyle(.secondary)
+            Text(value).font(.system(size: 24, weight: .bold, design: .rounded))
+            Text(unit).font(.caption).foregroundStyle(.secondary)
           }
-
-          Text(label)
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .padding(.top, 2)
+          Text(label).font(.caption).foregroundStyle(.secondary).padding(.top, 2)
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -245,8 +261,5 @@ struct SmallMetricCard: View {
 }
 
 #Preview {
-  MetricsView()
-    .environmentObject(HealthKitManager())
-    .environmentObject(WatchConnectivityManager())
-    .environmentObject(WorkoutRecordingManager())
+  MetricsView().environmentObject(HealthKitManager())
 }

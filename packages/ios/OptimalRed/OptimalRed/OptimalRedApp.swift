@@ -45,13 +45,13 @@ struct OptimalRedApp: App {
     WindowGroup {
       TabView {
         MetricsView()
-          .tabItem { Label("Today", systemImage: "heart.fill") }
+          .tabItem { Label("Activity", systemImage: "figure.run") }
 
         MapRouteView()
           .tabItem { Label("Map", systemImage: "map.fill") }
 
         HistoryView()
-          .tabItem { Label("History", systemImage: "chart.bar.fill") }
+          .tabItem { Label("History", systemImage: "list.bullet") }
 
         SettingsView()
           .tabItem { Label("Settings", systemImage: "gear") }
@@ -59,23 +59,6 @@ struct OptimalRedApp: App {
       .environmentObject(healthKitManager)
       .environmentObject(watchConnectivityManager)
       .environmentObject(recordingManager)
-      .sheet(isPresented: $showRecording) {
-        RecordingView()
-          .environmentObject(recordingManager)
-          .environmentObject(watchConnectivityManager)
-      }
-      .onReceive(NotificationCenter.default.publisher(for: .startHike)) { _ in
-        recordingManager.startHike()
-        showRecording = true
-      }
-      .onReceive(NotificationCenter.default.publisher(for: .startWalk)) { _ in
-        recordingManager.startWalk()
-        showRecording = true
-      }
-      .onReceive(NotificationCenter.default.publisher(for: .stopRecording)) { _ in
-        recordingManager.stopRecording()
-        showRecording = false
-      }
       .onAppear {
         watchConnectivityManager.recordingManager = recordingManager
         watchConnectivityManager.setModelContext(modelContainer.mainContext)

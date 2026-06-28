@@ -173,8 +173,18 @@ class HealthKitManager: NSObject, ObservableObject {
         self.isFetchingWorkouts = false
         self.hasMoreWorkouts = workouts.count == self.workoutPageSize
         self.workoutPageCursor = workouts.last?.startDate
-        if isFirst, let first = workouts.first {
-          self.selectWorkout(first)
+        if isFirst {
+          // Auto-select first GPS-capable workout so the map has something to show
+          let gpsTypes: Set<HKWorkoutActivityType> = [
+            .hiking, .walking, .running, .cycling,
+            .crossCountrySkiing, .downhillSkiing, .snowboarding, .skatingSports,
+            .paddleSports, .rowing, .surfingSports, .waterFitness
+          ]
+          if let first = workouts.first(where: { gpsTypes.contains($0.workoutActivityType) }) {
+            self.selectWorkout(first)
+          } else if let first = workouts.first {
+            self.selectWorkout(first)
+          }
         }
       }
     }

@@ -1,50 +1,76 @@
 import SwiftUI
-import SwiftData
+import HealthKit
 
 struct HistoryView: View {
-  @Query(sort: \StoredHealthMetric.recordedAt, order: .reverse) var metrics: [StoredHealthMetric]
-
-  private var groupedByDay: [(Date, [StoredHealthMetric])] {
-    let calendar = Calendar.current
-    let dict = Dictionary(grouping: metrics) { calendar.startOfDay(for: $0.recordedAt) }
-    return dict.sorted { $0.key > $1.key }
-  }
+  @EnvironmentObject var healthKitManager: HealthKitManager
+  @State private var selectedWorkout: HKWorkout?
 
   var body: some View {
     NavigationStack {
       Group {
-        if metrics.isEmpty {
+        if healthKitManager.recentWorkouts.isEmpty && !healthKitManager.isFetchingWorkouts {
           emptyState
         } else {
-          List {
-            ForEach(groupedByDay, id: \.0) { date, dayMetrics in
-              Section {
-                ForEach(dayMetrics) { metric in
-                  MetricRow(metric: metric)
-                }
-              } header: {
-                Text(date, style: .date)
-                  .font(.subheadline.weight(.semibold))
-                  .foregroundStyle(.primary)
-                  .textCase(nil)
-              }
-            }
-          }
-          .listStyle(.insetGrouped)
+          workoutList
         }
       }
       .navigationTitle("History")
+      .sheet(item: $selectedWorkout) { workout in
+        WorkoutDetailSheet(workout: workout)
+          .environmentObject(healthKitManager)
+      }
+      .onAppear {
+        if healthKitManager.recentWorkouts.isEmpty {
+          healthKitManager.fetchRecentWorkouts()
+        }
+      }
+      .toolbar {
+        ToolbarItem(placement: .navigationBarTrailing) {
+          if healthKitManager.isFetchingWorkouts {
+            ProgressView().scaleEffect(0.75)
+          }
+        }
+      }
     }
   }
 
+  // MARK: - Workout list
+
+  private var workoutList: some View {
+    List {
+      ForEach(healthKitManager.recentWorkouts, id: \.uuid) { workout in
+        WorkoutRow(workout: workout)
+          .contentShape(Rectangle())
+          .onTapGesture { selectedWorkout = workout }
+          .onAppear {
+            if workout.uuid == healthKitManager.recentWorkouts.last?.uuid {
+              healthKitManager.fetchMoreWorkouts()
+            }
+          }
+      }
+
+      if healthKitManager.isFetchingWorkouts {
+        HStack {
+          Spacer()
+          ProgressView()
+          Spacer()
+        }
+        .listRowSeparator(.hidden)
+      }
+    }
+    .listStyle(.plain)
+  }
+
+  // MARK: - Empty state
+
   private var emptyState: some View {
     VStack(spacing: 16) {
-      Image(systemName: "chart.bar.xaxis")
+      Image(systemName: "list.bullet.clipboard")
         .font(.system(size: 52))
         .foregroundStyle(.quaternary)
-      Text("No activity yet")
+      Text("No workouts yet")
         .font(.headline)
-      Text("Your health metrics will appear here once your Apple Watch starts syncing.")
+      Text("Your workouts from Apple Health will appear here.")
         .font(.subheadline)
         .foregroundStyle(.secondary)
         .multilineTextAlignment(.center)
@@ -54,54 +80,104 @@ struct HistoryView: View {
   }
 }
 
-struct MetricRow: View {
-  let metric: StoredHealthMetric
+// MARK: - Workout Row
 
-  private var config: (icon: String, color: Color, label: String) {
-    switch metric.type {
-    case "heart_rate": return ("heart.fill",       .red,    "Heart Rate")
-    case "distance":   return ("figure.walk",      .blue,   "Distance")
-    case "elevation":  return ("mountain.2.fill",  .green,  "Elevation")
-    case "calories":   return ("flame.fill",       .orange, "Calories")
-    default:           return ("circle.fill",      .gray,   metric.type.replacingOccurrences(of: "_", with: " ").capitalized)
-    }
-  }
+struct WorkoutRow: View {
+  let workout: HKWorkout
 
   var body: some View {
-    HStack(spacing: 12) {
-      Image(systemName: config.icon)
-        .font(.callout)
-        .foregroundStyle(config.color)
-        .frame(width: 32, height: 32)
-        .background(config.color.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+    HStack(spacing: 14) {
+      ZStack {
+        RoundedRectangle(cornerRadius: 10)
+          .fill(activityColor.opacity(0.15))
+          .frame(width: 42, height: 42)
+        Image(systemName: activityIcon)
+          .font(.system(size: 18, weight: .semibold))
+          .foregroundStyle(activityColor)
+      }
 
-      VStack(alignment: .leading, spacing: 2) {
-        Text(config.label)
-          .font(.subheadline.weight(.medium))
-        Text(metric.source == "watchos" ? "Apple Watch" : "iPhone")
+      VStack(alignment: .leading, spacing: 3) {
+        Text(workout.workoutActivityType.displayName)
+          .font(.subheadline.weight(.semibold))
+        Text(rowDate)
           .font(.caption)
           .foregroundStyle(.secondary)
       }
 
       Spacer()
 
-      VStack(alignment: .trailing, spacing: 2) {
-        HStack(alignment: .firstTextBaseline, spacing: 2) {
-          Text(String(format: "%.1f", metric.value))
-            .font(.subheadline.weight(.semibold))
-          Text(metric.unit)
-            .font(.caption)
-            .foregroundStyle(.secondary)
+      VStack(alignment: .trailing, spacing: 3) {
+        if let dist = distanceKm, dist > 0 {
+          Text(String(format: "%.2f km", dist))
+            .font(.subheadline.weight(.medium).monospacedDigit())
         }
-        Text(metric.recordedAt, style: .time)
-          .font(.caption2)
-          .foregroundStyle(.tertiary)
+        Text(formatDuration(workout.duration))
+          .font(.caption)
+          .foregroundStyle(.secondary)
+          .monospacedDigit()
       }
+    }
+    .padding(.vertical, 4)
+  }
+
+  private var distanceKm: Double? {
+    guard let d = workout.totalDistance?.doubleValue(for: .meter()), d > 0 else { return nil }
+    return d / 1000
+  }
+
+  private var rowDate: String {
+    let cal = Calendar.current
+    if cal.isDateInToday(workout.startDate)     { return "Today · \(workout.startDate.formatted(.dateTime.hour().minute()))" }
+    if cal.isDateInYesterday(workout.startDate) { return "Yesterday · \(workout.startDate.formatted(.dateTime.hour().minute()))" }
+    return workout.startDate.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+  }
+
+  private func formatDuration(_ t: TimeInterval) -> String {
+    let h = Int(t) / 3600; let m = (Int(t) % 3600) / 60
+    return h > 0 ? "\(h)h \(m)m" : "\(m)m"
+  }
+
+  var activityIcon: String {
+    switch workout.workoutActivityType {
+    case .hiking:   return "figure.hiking"
+    case .running:  return "figure.run"
+    case .cycling:  return "figure.outdoor.cycle"
+    case .swimming: return "figure.pool.swim"
+    case .traditionalStrengthTraining, .functionalStrengthTraining: return "dumbbell.fill"
+    case .yoga:     return "figure.yoga"
+    case .dance:    return "figure.dance"
+    case .rowing:   return "figure.rowing"
+    case .elliptical: return "figure.elliptical"
+    case .stairClimbing: return "figure.stair.stepper"
+    case .pilates:  return "figure.pilates"
+    case .mindAndBody: return "brain.head.profile"
+    case .soccer:   return "soccerball"
+    case .tennis:   return "tennisball.fill"
+    case .basketball: return "basketball.fill"
+    default:        return "figure.walk"
+    }
+  }
+
+  var activityColor: Color {
+    switch workout.workoutActivityType {
+    case .hiking:   return .green
+    case .running:  return .orange
+    case .cycling:  return .blue
+    case .swimming: return .cyan
+    case .traditionalStrengthTraining, .functionalStrengthTraining: return .purple
+    case .yoga:     return .pink
+    case .mindAndBody: return .indigo
+    case .tennis, .basketball, .soccer: return .yellow
+    default:        return .red
     }
   }
 }
 
+// Make HKWorkout identifiable for .sheet(item:)
+extension HKWorkout: @retroactive Identifiable {
+  public var id: UUID { uuid }
+}
+
 #Preview {
-  HistoryView()
-    .modelContainer(for: StoredHealthMetric.self, inMemory: true)
+  HistoryView().environmentObject(HealthKitManager())
 }
