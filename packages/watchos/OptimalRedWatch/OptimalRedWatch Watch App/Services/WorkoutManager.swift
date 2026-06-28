@@ -16,6 +16,12 @@ class WorkoutManager: NSObject, ObservableObject {
   private var elapsedTimer: Timer?
   private var broadcastTimer: Timer?
 
+  // Cache quantity types to avoid repeated force-unwraps and enable switch comparison
+  private static let hrType      = HKQuantityType.quantityType(forIdentifier: .heartRate)!
+  private static let distType    = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning)!
+  private static let calType     = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!
+  private static let climbType   = HKQuantityType.quantityType(forIdentifier: .flightsClimbed)!
+
   // MARK: - Authorization
 
   func requestAuthorization() {
@@ -23,17 +29,11 @@ class WorkoutManager: NSObject, ObservableObject {
 
     let share: Set<HKSampleType> = [
       HKObjectType.workoutType(),
-      HKQuantityType(.heartRate),
-      HKQuantityType(.distanceWalkingRunning),
-      HKQuantityType(.activeEnergyBurned),
-      HKQuantityType(.flightsClimbed),
+      Self.hrType, Self.distType, Self.calType, Self.climbType,
     ]
     let read: Set<HKObjectType> = [
       HKObjectType.workoutType(),
-      HKQuantityType(.heartRate),
-      HKQuantityType(.distanceWalkingRunning),
-      HKQuantityType(.activeEnergyBurned),
-      HKQuantityType(.flightsClimbed),
+      Self.hrType, Self.distType, Self.calType, Self.climbType,
     ]
 
     healthStore.requestAuthorization(toShare: share, read: read) { _, error in
@@ -76,11 +76,11 @@ class WorkoutManager: NSObject, ObservableObject {
 
   private func updateFromStatistics(_ stats: HKStatistics) {
     switch stats.quantityType {
-    case HKQuantityType(.heartRate):
+    case Self.hrType:
       heartRate = stats.mostRecentQuantity()?.doubleValue(for: HKUnit(from: "count/min")) ?? heartRate
-    case HKQuantityType(.distanceWalkingRunning):
+    case Self.distType:
       distance = (stats.sumQuantity()?.doubleValue(for: .meter()) ?? 0) / 1000
-    case HKQuantityType(.activeEnergyBurned):
+    case Self.calType:
       calories = stats.sumQuantity()?.doubleValue(for: .kilocalorie()) ?? calories
     default:
       break
