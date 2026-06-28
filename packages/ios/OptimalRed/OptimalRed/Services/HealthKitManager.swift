@@ -334,6 +334,21 @@ class HealthKitManager: NSObject, ObservableObject {
     return splits
   }
 
+  // MARK: - Heart rate samples for a specific workout (detail sheet)
+
+  func fetchHeartRateSamples(for workout: HKWorkout, completion: @escaping ([(Date, Double)]) -> Void) {
+    guard let type = HKQuantityType.quantityType(forIdentifier: .heartRate) else { completion([]); return }
+    let pred = HKQuery.predicateForSamples(withStart: workout.startDate, end: workout.endDate)
+    let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
+    let query = HKSampleQuery(sampleType: type, predicate: pred, limit: 300, sortDescriptors: [sort]) { _, samples, _ in
+      let pts = (samples as? [HKQuantitySample] ?? []).map {
+        ($0.startDate, $0.quantity.doubleValue(for: HKUnit(from: "count/min")))
+      }
+      DispatchQueue.main.async { completion(pts) }
+    }
+    healthStore.execute(query)
+  }
+
   // MARK: - Helpers
 
   private func todayPredicate() -> NSPredicate {
