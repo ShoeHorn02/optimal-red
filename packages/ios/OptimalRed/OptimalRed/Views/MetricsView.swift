@@ -3,6 +3,8 @@ import SwiftUI
 struct MetricsView: View {
   @EnvironmentObject var healthKitManager: HealthKitManager
   @EnvironmentObject var watchConnectivityManager: WatchConnectivityManager
+  @EnvironmentObject var recordingManager: WorkoutRecordingManager
+  @State private var showingRecording = false
 
   private var greeting: String {
     let hour = Calendar.current.component(.hour, from: Date())
@@ -22,10 +24,42 @@ struct MetricsView: View {
           HeartRateCard(heartRate: healthKitManager.heartRate)
 
           LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            SmallMetricCard(label: "Distance",  value: String(format: "%.2f", healthKitManager.distance),  unit: "km",   icon: "figure.walk",       color: .blue)
-            SmallMetricCard(label: "Elevation", value: String(format: "%.0f", healthKitManager.elevation), unit: "m",    icon: "mountain.2.fill",   color: .green)
-            SmallMetricCard(label: "Calories",  value: String(format: "%.0f", healthKitManager.calories),  unit: "kcal", icon: "flame.fill",        color: .orange)
+            SmallMetricCard(label: "Distance",  value: String(format: "%.2f", healthKitManager.distance),  unit: "km",   icon: "figure.walk",     color: .blue)
+            SmallMetricCard(label: "Elevation", value: String(format: "%.0f", healthKitManager.elevation), unit: "m",    icon: "mountain.2.fill", color: .green)
+            SmallMetricCard(label: "Calories",  value: String(format: "%.0f", healthKitManager.calories),  unit: "kcal", icon: "flame.fill",      color: .orange)
           }
+
+          // Record button
+          Button {
+            showingRecording = true
+          } label: {
+            HStack {
+              Image(systemName: recordingManager.isRecording ? "waveform.circle.fill" : "record.circle")
+                .font(.title3)
+              Text(recordingManager.isRecording ? "Recording…" : "Record workout")
+                .font(.headline)
+              Spacer()
+              if recordingManager.isRecording {
+                Text(formatDuration(recordingManager.elapsedTime))
+                  .font(.subheadline.monospacedDigit())
+                  .foregroundStyle(.red)
+              }
+              Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+            .padding()
+            .background(recordingManager.isRecording
+                        ? Color.red.opacity(0.12)
+                        : Color(.secondarySystemBackground),
+                        in: RoundedRectangle(cornerRadius: 16))
+            .overlay(
+              RoundedRectangle(cornerRadius: 16)
+                .stroke(recordingManager.isRecording ? Color.red.opacity(0.4) : Color.clear, lineWidth: 1)
+            )
+          }
+          .foregroundStyle(recordingManager.isRecording ? .red : .primary)
+          .buttonStyle(.plain)
         }
         .padding()
       }
@@ -44,13 +78,31 @@ struct MetricsView: View {
         healthKitManager.startHealthKitUpdates()
         watchConnectivityManager.startWatchConnectivity()
       }
+      .sheet(isPresented: $showingRecording) {
+        RecordingView()
+      }
+      .onReceive(NotificationCenter.default.publisher(for: .startHike)) { _ in
+        showingRecording = true
+      }
+      .onReceive(NotificationCenter.default.publisher(for: .startWalk)) { _ in
+        showingRecording = true
+      }
     }
+  }
+
+  private func formatDuration(_ t: TimeInterval) -> String {
+    let h = Int(t) / 3600
+    let m = (Int(t) % 3600) / 60
+    let s = Int(t) % 60
+    return h > 0
+      ? String(format: "%d:%02d:%02d", h, m, s)
+      : String(format: "%02d:%02d", m, s)
   }
 
   private var watchStatusPill: some View {
     HStack(spacing: 6) {
       Circle()
-        .fill(watchConnectivityManager.isConnected ? Color.green : Color(.systemGray3))
+        .fill(watchConnectivityManager.isConnected ? Color.green : Color.secondary.opacity(0.5))
         .frame(width: 7, height: 7)
       Text(watchConnectivityManager.isConnected ? "Apple Watch connected" : "Apple Watch not found")
         .font(.caption)
@@ -137,4 +189,5 @@ struct SmallMetricCard: View {
   MetricsView()
     .environmentObject(HealthKitManager())
     .environmentObject(WatchConnectivityManager())
+    .environmentObject(WorkoutRecordingManager())
 }

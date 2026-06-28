@@ -10,9 +10,9 @@ Optimal Red is a comprehensive health tracking application for Apple ecosystem d
 
 ## Current Status
 
-**Phase**: Phase 0 (MVP) - ✅ Watch + iPhone apps built and running on simulators
+**Phase**: Phase 0 → Phase 1 transition
 **Date Started**: 2026-06-27
-**Date Completed**: 2026-06-28
+**Last Updated**: 2026-06-28
 **GitHub**: https://github.com/ShoeHorn02/optimal-red
 
 ### What's Done
@@ -20,29 +20,40 @@ Optimal Red is a comprehensive health tracking application for Apple ecosystem d
 - [x] Shared types package initialized (health metrics, user models)
 - [x] Backend package template created (Next.js + Drizzle)
 - [x] GitHub repository created
-- [x] Watch app created - ✅ Built & Running on simulator
-- [x] iPhone app created - ✅ Built & Running on simulator
+- [x] Watch app — built & running on simulator
+- [x] iPhone app — built & running on simulator
 - [x] HealthKit integration on both Watch & iPhone
-- [x] HealthKit permission strings in build settings (NSHealthShareUsageDescription, NSHealthUpdateUsageDescription)
+- [x] HealthKit permission strings in build settings
 - [x] WatchConnectivity setup for Watch ↔ iPhone communication
 - [x] SwiftData persistence on iPhone (StoredHealthMetric model)
-- [x] TabView UI (Today's Metrics, History, Settings)
-- [ ] Pair simulators and test Watch → iPhone data flow end-to-end
+- [x] TabView UI: Today, Map (GPS route from HealthKit), History, Settings
+- [x] MapKit hike map (satellite, red polyline, start/finish annotations, workout picker)
+- [x] **Workout recording**: tap Record on iPhone → HKWorkoutSession starts on Watch → streams live HR/distance/calories back to iPhone every 3s
+- [x] **Siri AppIntents**: "Begin hike in Optimal Red" / "Begin walk in Optimal Red" / "Stop recording in Optimal Red"
+- [x] Watch recording UI: live timer, HR, distance, stop button
+- [x] App icon from HeartHealth branding (heart + ECG pulse, dark bg)
+- [x] fastlane configured: `fastlane build`, `fastlane beta` (TestFlight upload)
+- [ ] Fill in fastlane .env.local with ASC API key to enable TestFlight deploys
 - [ ] Provision real devices for on-device testing
-- [ ] CI/CD workflows set up
+- [ ] CI/CD GitHub Actions workflows
 - [ ] Backend database schema
 
 ## MVP Status (Phase 0)
 
 **✅ Working:**
 - Watch app fetches HealthKit data: heart rate, distance, elevation, calories
-- Watch displays metrics on screen
-- iPhone receives metrics from Watch via WatchConnectivity
-- iPhone stores metrics in SwiftData (local database)
+- Watch displays today's metrics + Hike/Walk start buttons
+- iPhone receives passive metrics via WatchConnectivity
+- iPhone stores metrics in SwiftData
 - iPhone displays today's metrics in MetricsView
+- iPhone shows GPS workout routes in MapRouteView (hybrid satellite, red polyline)
 - iPhone shows historical metrics in HistoryView
 - Settings view shows connection status
+- **Workout recording**: iPhone → Watch command → HKWorkoutSession + HKLiveWorkoutBuilder → live metrics stream → iPhone displays live timer, HR, distance, calories
+- **Siri**: "Begin hike in Optimal Red", "Begin walk in Optimal Red", "Stop recording in Optimal Red"
 - Both apps build and run on simulators
+- App icon updated (HeartHealth SVG design: dark bg, red heart, ECG pulse line)
+- fastlane configured for TestFlight upload (needs ASC API key credentials)
 
 **⚠️ Known Simulator Limitation:**
 - WatchConnectivity between simulators requires paired simulators (iOS + watchOS)
@@ -286,6 +297,34 @@ In Xcode Info.plist for both Watch & iPhone:
 - [x] Set Team ID in Xcode projects (DEVELOPMENT_TEAM = 6XYMR8VRKR)
 - [ ] Create 4 development provisioning profiles (iOS, watchOS, WatchKit, macOS)
 - [ ] Download and import profiles to Xcode
+
+## fastlane Setup
+
+Fastlane is configured in `packages/ios/OptimalRed/fastlane/`.
+
+### Lanes
+| Command | What it does |
+|---|---|
+| `fastlane build` | Clean archive locally (output: `build/OptimalRed.ipa`) |
+| `fastlane beta` | Bump build number → build → upload to TestFlight |
+| `fastlane bump_build` | Increment build number only |
+
+### To enable TestFlight deploys
+Create `packages/ios/OptimalRed/fastlane/.env.local`:
+```sh
+ASC_KEY_ID=<from App Store Connect → Users & Access → Keys>
+ASC_ISSUER_ID=<issuer UUID on same page>
+ASC_KEY_PATH=~/AuthKey_XXXXXX.p8
+TEAM_ID=<your 10-char team ID>
+ITC_TEAM_ID=<numeric App Store Connect team ID>
+```
+Run from `packages/ios/OptimalRed/`: `fastlane beta`
+
+## Pinned UI Improvements (Next Sprint)
+- [ ] Active recording: elevation gain graph as user walks (like Fitness.app)
+- [ ] Active recording: per-km (or per-mile) split times
+- [ ] Active recording: live heart rate graph during session
+- [ ] General iPhone UI polish pass
 
 ## Next Steps
 

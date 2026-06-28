@@ -5,6 +5,9 @@ import SwiftData
 struct OptimalRedApp: App {
   @StateObject private var healthKitManager = HealthKitManager()
   @StateObject private var watchConnectivityManager = WatchConnectivityManager()
+  @StateObject private var recordingManager = WorkoutRecordingManager()
+  @State private var showRecording = false
+
   let modelContainer: ModelContainer
 
   init() {
@@ -35,6 +38,28 @@ struct OptimalRedApp: App {
       }
       .environmentObject(healthKitManager)
       .environmentObject(watchConnectivityManager)
+      .environmentObject(recordingManager)
+      .sheet(isPresented: $showRecording) {
+        RecordingView()
+          .environmentObject(recordingManager)
+          .environmentObject(watchConnectivityManager)
+      }
+      .onReceive(NotificationCenter.default.publisher(for: .startHike)) { _ in
+        recordingManager.startHike()
+        showRecording = true
+      }
+      .onReceive(NotificationCenter.default.publisher(for: .startWalk)) { _ in
+        recordingManager.startWalk()
+        showRecording = true
+      }
+      .onReceive(NotificationCenter.default.publisher(for: .stopRecording)) { _ in
+        recordingManager.stopRecording()
+        showRecording = false
+      }
+      .onAppear {
+        watchConnectivityManager.recordingManager = recordingManager
+        watchConnectivityManager.setModelContext(modelContainer.mainContext)
+      }
     }
     .modelContainer(modelContainer)
   }

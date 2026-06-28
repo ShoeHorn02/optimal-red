@@ -6,116 +6,84 @@ import Combine
 class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
   @Published var isConnected = false
   @Published var lastReceivedMetrics: [String: Double] = [:]
-  private var wcSession: WCSession?
+
   private var modelContext: ModelContext?
+  weak var recordingManager: WorkoutRecordingManager?
 
   override init() {
     super.init()
     if WCSession.isSupported() {
-      wcSession = WCSession.default
-      wcSession?.delegate = self
-      wcSession?.activate()
+      WCSession.default.delegate = self
+      WCSession.default.activate()
     }
   }
 
   func setModelContext(_ context: ModelContext) {
-    self.modelContext = context
+    modelContext = context
   }
 
   func startWatchConnectivity() {
     DispatchQueue.main.async {
-      self.isConnected = self.wcSession?.isReachable ?? false
+      self.isConnected = WCSession.default.isReachable
     }
   }
+
+  // MARK: - WCSessionDelegate
 
   func session(
-    _: WCSession,
-    activationDidCompleteWith activationState: WCSessionActivationState,
+    _ session: WCSession,
+    activationDidCompleteWith state: WCSessionActivationState,
     error: Error?
   ) {
-    DispatchQueue.main.async {
-      self.isConnected = activationState == .activated
-    }
-    if let error = error {
-      print("WCSession activation error: \(error.localizedDescription)")
-    }
+    DispatchQueue.main.async { self.isConnected = state == .activated }
+    if let error { print("WCSession error: \(error.localizedDescription)") }
   }
 
-  func sessionDidBecomeInactive(_: WCSession) {
-    DispatchQueue.main.async {
-      self.isConnected = false
-    }
+  func sessionDidBecomeInactive(_ session: WCSession) {
+    DispatchQueue.main.async { self.isConnected = false }
   }
 
-  func sessionDidDeactivate(_: WCSession) {
-    DispatchQueue.main.async {
-      self.isConnected = false
-    }
+  func sessionDidDeactivate(_ session: WCSession) {
+    DispatchQueue.main.async { self.isConnected = false }
+    WCSession.default.activate()
   }
 
-  func session(_: WCSession, didReceiveMessage message: [String: Any]) {
+  func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
+    // Live workout update from Watch
+    if message["isRecording"] as? Bool == true || message["workoutEnded"] as? Bool == true {
+      recordingManager?.handleLiveUpdate(message)
+      return
+    }
+    // Regular metric sync — store to SwiftData
     DispatchQueue.main.async {
-      print("Received from Watch: \(message)")
-      self.lastReceivedMetrics = message as? [String: Double] ?? [:]
-
+      self.lastReceivedMetrics = message.compactMapValues { $0 as? Double }
       if let context = self.modelContext {
         self.storeMetrics(from: message, context: context)
       }
     }
   }
 
+  func session(_ session: WCSession, didReceiveMessage message: [String: Any], replyHandler: @escaping ([String: Any]) -> Void) {
+    self.session(session, didReceiveMessage: message)
+    replyHandler(["ack": true])
+  }
+
+  // MARK: - Persist to SwiftData
+
   private func storeMetrics(from message: [String: Any], context: ModelContext) {
-    let timestamp = message["timestamp"] as? Double ?? Date().timeIntervalSince1970
+    let ts = message["timestamp"] as? Double ?? Date().timeIntervalSince1970
+    let date = Date(timeIntervalSince1970: ts)
 
-    if let hr = message["heartRate"] as? Double {
-      let metric = StoredHealthMetric(
-        type: "heart_rate",
-        value: hr,
-        unit: "bpm",
-        recordedAt: Date(timeIntervalSince1970: timestamp),
-        source: "watchos"
-      )
-      context.insert(metric)
+    let pairs: [(String, Double?, String)] = [
+      ("heart_rate", message["heartRate"] as? Double, "bpm"),
+      ("distance",   message["distance"]  as? Double, "km"),
+      ("elevation",  message["elevation"] as? Double, "m"),
+      ("calories",   message["calories"]  as? Double, "kcal"),
+    ]
+    for (type, value, unit) in pairs {
+      guard let value else { continue }
+      context.insert(StoredHealthMetric(type: type, value: value, unit: unit, recordedAt: date, source: "watchos"))
     }
-
-    if let distance = message["distance"] as? Double {
-      let metric = StoredHealthMetric(
-        type: "distance",
-        value: distance,
-        unit: "km",
-        recordedAt: Date(timeIntervalSince1970: timestamp),
-        source: "watchos"
-      )
-      context.insert(metric)
-    }
-
-    if let elevation = message["elevation"] as? Double {
-      let metric = StoredHealthMetric(
-        type: "elevation",
-        value: elevation,
-        unit: "m",
-        recordedAt: Date(timeIntervalSince1970: timestamp),
-        source: "watchos"
-      )
-      context.insert(metric)
-    }
-
-    if let calories = message["calories"] as? Double {
-      let metric = StoredHealthMetric(
-        type: "calories",
-        value: calories,
-        unit: "kcal",
-        recordedAt: Date(timeIntervalSince1970: timestamp),
-        source: "watchos"
-      )
-      context.insert(metric)
-    }
-
-    do {
-      try context.save()
-      print("Metrics stored successfully")
-    } catch {
-      print("Error saving metrics: \(error.localizedDescription)")
-    }
+    try? context.save()
   }
 }

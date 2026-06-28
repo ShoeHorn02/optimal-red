@@ -2,14 +2,18 @@ import SwiftUI
 
 @main
 struct OptimalRedWatchApp: App {
-  @StateObject private var healthKitManager = HealthKitManager()
+  @StateObject private var workoutManager = WorkoutManager()
   @StateObject private var watchConnectivityManager = WatchConnectivityManager()
 
   var body: some Scene {
     WindowGroup {
       ContentView()
-        .environmentObject(healthKitManager)
+        .environmentObject(workoutManager)
         .environmentObject(watchConnectivityManager)
+        .onAppear {
+          watchConnectivityManager.workoutManager = workoutManager
+          workoutManager.requestAuthorization()
+        }
     }
   }
 }

@@ -1,0 +1,4 @@
+app_identifier("app.optimalred.ios")
+apple_id("claudeai.contented735@passmail.com")
+team_id(ENV["TEAM_ID"])
+itc_team_id(ENV["ITC_TEAM_ID"])

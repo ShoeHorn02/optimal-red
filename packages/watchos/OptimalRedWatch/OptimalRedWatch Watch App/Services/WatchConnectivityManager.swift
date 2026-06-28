@@ -1,57 +1,57 @@
 import WatchConnectivity
 import SwiftUI
-import Combine
+import HealthKit
 
 class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
   @Published var isConnected = false
-  private var wcSession: WCSession?
+
+  weak var workoutManager: WorkoutManager?
 
   override init() {
     super.init()
     if WCSession.isSupported() {
-      wcSession = WCSession.default
-      wcSession?.delegate = self
-      wcSession?.activate()
+      WCSession.default.delegate = self
+      WCSession.default.activate()
     }
   }
 
   func startWatchConnectivity() {
     DispatchQueue.main.async {
-      self.isConnected = self.wcSession?.isReachable ?? false
+      self.isConnected = WCSession.default.isReachable
     }
   }
 
-  func sendHealthMetrics(heartRate: Double, distance: Double, elevation: Double, calories: Double) {
-    guard let session = wcSession, session.isReachable else {
-      print("Watch Connectivity: iPhone not reachable")
-      return
-    }
-
-    let data: [String: Any] = [
-      "heartRate": heartRate,
-      "distance": distance,
-      "elevation": elevation,
-      "calories": calories,
-      "timestamp": Date().timeIntervalSince1970,
-    ]
-
-    session.sendMessage(data, replyHandler: { response in
-      print("iPhone received metrics: \(response)")
-    }) { error in
-      print("Error sending metrics: \(error.localizedDescription)")
-    }
-  }
+  // MARK: - WCSessionDelegate
 
   func session(
-    _: WCSession,
-    activationDidCompleteWith activationState: WCSessionActivationState,
+    _ session: WCSession,
+    activationDidCompleteWith state: WCSessionActivationState,
     error: Error?
   ) {
     DispatchQueue.main.async {
-      self.isConnected = activationState == .activated
+      self.isConnected = state == .activated
     }
-    if let error = error {
-      print("WCSession activation error: \(error.localizedDescription)")
+    if let error { print("WCSession error: \(error.localizedDescription)") }
+  }
+
+  func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
+    guard let command = message["command"] as? String else { return }
+    DispatchQueue.main.async {
+      switch command {
+      case "startHike":
+        self.workoutManager?.startWorkout(type: .hiking)
+      case "startWalk":
+        self.workoutManager?.startWorkout(type: .walking)
+      case "stopWorkout":
+        self.workoutManager?.endWorkout()
+      default:
+        break
+      }
     }
+  }
+
+  func session(_ session: WCSession, didReceiveMessage message: [String: Any], replyHandler: @escaping ([String: Any]) -> Void) {
+    self.session(session, didReceiveMessage: message)
+    replyHandler(["ack": true])
   }
 }
