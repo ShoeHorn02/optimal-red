@@ -1,6 +1,7 @@
 import WatchConnectivity
 import SwiftUI
 import SwiftData
+import Combine
 
 class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
   @Published var isConnected = false

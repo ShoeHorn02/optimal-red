@@ -1,5 +1,6 @@
 import HealthKit
 import SwiftUI
+import Combine
 
 class HealthKitManager: NSObject, ObservableObject {
   @Published var heartRate: Double = 0
@@ -80,7 +81,7 @@ class HealthKitManager: NSObject, ObservableObject {
     ) { _, result, _ in
       DispatchQueue.main.async {
         if let sum = result?.sumQuantity() {
-          let distance = sum.doubleValue(for: HKUnit.kilometer())
+          let distance = sum.doubleValue(for: HKUnit.meter()) / 1000
           self.distance = distance
         }
       }
@@ -130,7 +131,7 @@ class HealthKitManager: NSObject, ObservableObject {
     ) { _, result, _ in
       DispatchQueue.main.async {
         if let sum = result?.sumQuantity() {
-          let calories = sum.doubleValue(for: HKUnit.kilocalorie())
+          let calories = sum.doubleValue(for: HKUnit(from: "Cal"))
           self.calories = calories
         }
       }

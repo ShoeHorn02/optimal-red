@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Optimal Red needs access to your health data to track heart rate, distance, elevation, and calories from your Apple Watch.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Optimal Red needs permission to save your workouts to Health.</string>
+</dict>
+</plist>
