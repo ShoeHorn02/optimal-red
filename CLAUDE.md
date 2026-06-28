@@ -6,6 +6,8 @@ Optimal Red is a comprehensive health tracking application for Apple ecosystem d
 
 **Vision**: Create the macOS app that Apple Fitness+ doesn't have, with deep HealthKit integration across watch, phone, and Mac.
 
+**Domain**: optimalred.app (registered on Namecheap, managed by DigitalOcean DNS)
+
 ## Current Status
 
 **Phase**: Phase 0 (MVP) - Initialize monorepo & create Watch + iPhone apps
@@ -154,6 +156,91 @@ Mac + Web Dashboard
 - `packages/backend/app/api/health/sync/route.ts`
 - `packages/backend/lib/db/schema.ts` (Drizzle)
 
+## Apple Developer Console Setup (Required Before Building)
+
+### 1. Register Bundle IDs
+In [App Store Connect](https://appstoreconnect.apple.com/):
+
+Go to **Certificates, Identifiers & Profiles** → **Identifiers**:
+
+1. **Create App ID for iPhone**:
+   - Type: App
+   - Description: Optimal Red iOS
+   - Bundle ID: `app.optimalred.ios` (Explicit)
+   - Capabilities:
+     - ✅ HealthKit
+     - ✅ Sign in with Apple
+     - ✅ iCloud (CloudKit - for Phase 1+)
+
+2. **Create App ID for Watch**:
+   - Type: App
+   - Description: Optimal Red watchOS
+   - Bundle ID: `app.optimalred.watchos` (Explicit)
+   - Capabilities:
+     - ✅ HealthKit
+     - ✅ WatchConnectivity
+
+3. **Create App ID for WatchKit Extension**:
+   - Type: App Clip
+   - Description: Optimal Red WatchKit
+   - Bundle ID: `app.optimalred.watchos.watchkit` (Explicit)
+   - Capabilities:
+     - ✅ HealthKit
+     - ✅ WatchConnectivity
+
+### 2. Create Provisioning Profiles
+In **Certificates, Identifiers & Profiles** → **Provisioning Profiles**:
+
+1. **iOS Development Profile**:
+   - Type: Development
+   - App ID: app.optimalred.ios
+   - Certificate: Select your developer cert
+   - Devices: Select your test devices
+   - Name: "Optimal Red iOS Dev"
+
+2. **watchOS Development Profile**:
+   - Type: Development
+   - App ID: app.optimalred.watchos
+   - Certificate: Select your developer cert
+   - Devices: Select your test watches
+   - Name: "Optimal Red watchOS Dev"
+
+3. **WatchKit Extension Development Profile**:
+   - Type: Development
+   - App ID: app.optimalred.watchos.watchkit
+   - Certificate: Select your developer cert
+   - Devices: Select your test watches
+   - Name: "Optimal Red WatchKit Dev"
+
+**Download all 3 profiles and import into Xcode**.
+
+### 3. In Xcode (After Creating Projects)
+- Set Team ID for both projects (Xcode → Preferences → Accounts → Team ID)
+- Set Bundle ID to match what you registered
+- Select provisioning profiles in Build Settings
+- HealthKit capability will auto-enable if profile is correct
+
+### 4. Enable HealthKit Permissions
+In Xcode Info.plist for both Watch & iPhone:
+
+```xml
+<key>NSHealthShareUsageDescription</key>
+<string>Optimal Red needs access to your health data to track heart rate, distance, elevation, and calories from your Apple Watch.</string>
+
+<key>NSHealthUpdateUsageDescription</key>
+<string>Optimal Red needs permission to save your workouts to Health.</string>
+```
+
+### Checklist Before Building
+- [ ] Created app.optimalred.ios Bundle ID
+- [ ] Created app.optimalred.watchos Bundle ID
+- [ ] Created app.optimalred.watchos.watchkit Bundle ID
+- [ ] Enabled HealthKit on all 3
+- [ ] Created 3 development provisioning profiles
+- [ ] Downloaded and imported profiles to Xcode
+- [ ] Set Team ID in Xcode projects
+- [ ] Added HealthKit to Info.plist
+
 ## Next Steps
 
 1. **Create Watch App** (Xcode)
@@ -189,10 +276,22 @@ Mac + Web Dashboard
 - Backend deployment target: DigitalOcean App Platform
 - Ignore existing OptimalRed GitHub repo - this is a fresh start
 
+## Bundle IDs & App Identifiers
+
+### iOS Bundle IDs
+- **iPhone App**: `app.optimalred.ios`
+- **Watch Companion**: `app.optimalred.watchos`
+- **WatchKit Extension**: `app.optimalred.watchos.watchkit`
+
+### Backend Domain
+- **API**: `api.optimalred.app`
+- **Dashboard**: `dashboard.optimalred.app`
+
 ## Team Access
 
 - **GitHub**: ShoeHorn02 (authenticated)
 - **DigitalOcean**: doctl (authenticated, has credentials)
+- **Namecheap**: Domain owner (optimalred.app)
 - **Xcode**: Available for local development
 - **fastlane**: Available (v2.236.1) for build automation
 
