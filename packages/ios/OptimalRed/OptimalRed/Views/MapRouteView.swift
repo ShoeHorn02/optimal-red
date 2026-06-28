@@ -37,8 +37,8 @@ struct MapRouteView: View {
       .onAppear {
         healthKitManager.fetchRecentWorkouts()
       }
-      .onChange(of: healthKitManager.routeCoordinates) { _, coords in
-        fitToRoute(coords)
+      .onChange(of: healthKitManager.routeCoordinates.count) { _, _ in
+        fitToRoute(healthKitManager.routeCoordinates)
       }
     }
   }
@@ -273,7 +273,7 @@ struct WorkoutChip: View {
     }
     .padding(.horizontal, 12)
     .padding(.vertical, 8)
-    .background(isSelected ? Color.red : Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
+    .background(isSelected ? Color.red : Color(UIColor.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
     .animation(.easeInOut(duration: 0.15), value: isSelected)
   }
 
