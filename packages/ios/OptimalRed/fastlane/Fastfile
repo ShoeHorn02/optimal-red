@@ -20,7 +20,7 @@ platform :ios do
   desc "Build archive (no upload)"
   lane :build do
     gym(
-      project:       "OptimalRed.xcodeproj",
+      workspace:     "OptimalRed.xcworkspace",
       scheme:        "OptimalRed",
       configuration: "Release",
       export_method: "app-store",

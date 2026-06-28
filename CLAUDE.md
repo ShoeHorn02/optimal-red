@@ -33,7 +33,8 @@ Optimal Red is a comprehensive health tracking application for Apple ecosystem d
 - [x] Watch recording UI: live timer, HR, distance, stop button
 - [x] App icon from HeartHealth branding (heart + ECG pulse, dark bg)
 - [x] fastlane configured: `fastlane build`, `fastlane beta` (TestFlight upload)
-- [ ] Fill in fastlane .env.local with ASC API key to enable TestFlight deploys
+- [x] fastlane .env.local filled with ASC API key — TestFlight deploys working
+- [x] **Watch app embedded inside iOS Xcode project** — one IPA ships both apps; Watch auto-installs when user installs the iPhone app (Build 6 on TestFlight)
 - [ ] Provision real devices for on-device testing
 - [ ] CI/CD GitHub Actions workflows
 - [ ] Backend database schema
@@ -53,7 +54,8 @@ Optimal Red is a comprehensive health tracking application for Apple ecosystem d
 - **Siri**: "Begin hike in Optimal Red", "Begin walk in Optimal Red", "Stop recording in Optimal Red"
 - Both apps build and run on simulators
 - App icon updated (HeartHealth SVG design: dark bg, red heart, ECG pulse line)
-- fastlane configured for TestFlight upload (needs ASC API key credentials)
+- fastlane fully working — `fastlane build` tests every change, `fastlane beta` uploads to TestFlight
+- **Watch embedded in iOS project** — `OptimalRed.xcworkspace` references both; single IPA includes Watch companion (auto-installs on paired Watch)
 
 **⚠️ Known Simulator Limitation:**
 - WatchConnectivity between simulators requires paired simulators (iOS + watchOS)
@@ -340,9 +342,7 @@ Do not commit `.env.local` — it is gitignored.
    - `.github/workflows/test-watchos.yml`
    - `.github/workflows/test-ios.yml`
 
-4. **TestFlight beta**
-   - Build for distribution
-   - Upload via fastlane or Xcode Organizer
+4. **TestFlight beta** ✅ Build 6 live — includes Watch companion
    - Invite testers
 
 5. **Start Phase 1** (Backend)
@@ -379,4 +379,4 @@ Do not commit `.env.local` — it is gitignored.
 
 ---
 
-Last Updated: 2026-06-28 | Status: Phase 0 complete — both apps running on simulators, testing on real devices next
+Last Updated: 2026-06-28 | Status: Phase 0 complete — Watch embedded in iOS project, both shipped as one IPA (Build 6 on TestFlight)
