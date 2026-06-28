@@ -29,7 +29,11 @@ struct MapRouteView: View {
           .environmentObject(healthKitManager)
       }
     }
-    .onAppear { healthKitManager.fetchRecentWorkouts() }
+    .onAppear {
+      if healthKitManager.recentWorkouts.isEmpty {
+        healthKitManager.fetchRecentWorkouts()
+      }
+    }
     .onChange(of: healthKitManager.routeCoordinates.count) { _, _ in
       fitToRoute(healthKitManager.routeCoordinates)
     }
@@ -38,24 +42,49 @@ struct MapRouteView: View {
   // MARK: - Map
 
   private var map: some View {
-    Map(position: $position) {
-      UserAnnotation()
-      if let start = healthKitManager.routeCoordinates.first {
-        Annotation("", coordinate: start, anchor: .bottom) { startPin }
+    ZStack {
+      Map(position: $position) {
+        UserAnnotation()
+        if let start = healthKitManager.routeCoordinates.first {
+          Annotation("", coordinate: start, anchor: .bottom) { startPin }
+        }
+        if let end = healthKitManager.routeCoordinates.last,
+           healthKitManager.routeCoordinates.count > 1 {
+          Annotation("", coordinate: end, anchor: .bottom) { finishPin }
+        }
+        if !healthKitManager.routeCoordinates.isEmpty {
+          MapPolyline(coordinates: healthKitManager.routeCoordinates)
+            .stroke(.red, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+        }
       }
-      if let end = healthKitManager.routeCoordinates.last,
-         healthKitManager.routeCoordinates.count > 1 {
-        Annotation("", coordinate: end, anchor: .bottom) { finishPin }
+      .mapStyle(.hybrid(elevation: .realistic))
+      .mapControls {
+        MapUserLocationButton()
+        MapCompass()
       }
-      if !healthKitManager.routeCoordinates.isEmpty {
-        MapPolyline(coordinates: healthKitManager.routeCoordinates)
-          .stroke(.red, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+
+      // Route loading spinner
+      if healthKitManager.isLoadingRoute {
+        ProgressView("Loading route…")
+          .padding(14)
+          .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
       }
-    }
-    .mapStyle(.hybrid(elevation: .realistic))
-    .mapControls {
-      MapUserLocationButton()
-      MapCompass()
+
+      // No GPS data for this workout
+      if !healthKitManager.isLoadingRoute,
+         healthKitManager.selectedWorkout != nil,
+         healthKitManager.routeCoordinates.isEmpty {
+        VStack(spacing: 8) {
+          Image(systemName: "map.slash")
+            .font(.system(size: 28))
+            .foregroundStyle(.secondary)
+          Text("No GPS route saved")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+        }
+        .padding(20)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+      }
     }
   }
 

@@ -56,6 +56,7 @@ class HealthKitManager: NSObject, ObservableObject {
     let typesToRead: Set<HKObjectType> = [
       HKQuantityType.quantityType(forIdentifier: .heartRate)!,
       HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning)!,
+      HKQuantityType.quantityType(forIdentifier: .distanceCycling)!,
       HKQuantityType.quantityType(forIdentifier: .flightsClimbed)!,
       HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!,
       HKObjectType.workoutType(),

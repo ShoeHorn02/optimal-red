@@ -12,5 +12,7 @@
 	<string>Optimal Red needs access to your health data to track heart rate, distance, elevation, and calories from your Apple Watch.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Optimal Red needs permission to save your workouts to Health.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

@@ -30,7 +30,14 @@ platform :ios do
     get_provisioning_profile(
       api_key:        key,
       app_identifier: "app.optimalred.ios",
-      force:          true
+      force:          true,
+      filename:       "OptimalRed_iOS.mobileprovision"
+    )
+    get_provisioning_profile(
+      api_key:        key,
+      app_identifier: "app.optimalred.watchos",
+      force:          true,
+      filename:       "OptimalRed_Watch.mobileprovision"
     )
   end
 
