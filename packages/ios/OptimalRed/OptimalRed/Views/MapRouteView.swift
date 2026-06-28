@@ -110,6 +110,14 @@ struct MapRouteView: View {
           .onTapGesture {
             healthKitManager.selectWorkout(workout)
           }
+          .onAppear {
+            if workout.uuid == healthKitManager.recentWorkouts.last?.uuid {
+              healthKitManager.fetchMoreWorkouts()
+            }
+          }
+        }
+        if healthKitManager.isFetchingWorkouts {
+          ProgressView().padding(.horizontal, 8)
         }
       }
       .padding(.horizontal, 16)

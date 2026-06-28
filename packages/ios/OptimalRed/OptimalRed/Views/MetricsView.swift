@@ -29,6 +29,15 @@ struct MetricsView: View {
             SmallMetricCard(label: "Calories",  value: String(format: "%.0f", healthKitManager.calories),  unit: "kcal", icon: "flame.fill",      color: .orange)
           }
 
+          // Live session card (shows when Fitness app or any HK source is active)
+          if healthKitManager.isLiveSessionActive {
+            LiveSessionCard(
+              heartRate: healthKitManager.liveHeartRate,
+              distance: healthKitManager.liveDistance,
+              calories: healthKitManager.liveCalories
+            )
+          }
+
           // Record button
           Button {
             showingRecording = true
@@ -76,7 +85,11 @@ struct MetricsView: View {
       .onAppear {
         healthKitManager.requestAuthorization()
         healthKitManager.startHealthKitUpdates()
+        healthKitManager.startLiveObservation()
         watchConnectivityManager.startWatchConnectivity()
+      }
+      .onDisappear {
+        healthKitManager.stopLiveObservation()
       }
       .sheet(isPresented: $showingRecording) {
         RecordingView()
@@ -112,6 +125,52 @@ struct MetricsView: View {
 }
 
 // MARK: - Cards
+
+struct LiveSessionCard: View {
+  let heartRate: Double
+  let distance: Double
+  let calories: Double
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 10) {
+      HStack(spacing: 6) {
+        Circle()
+          .fill(.green)
+          .frame(width: 8, height: 8)
+          .opacity(0.9)
+        Text("Live session detected")
+          .font(.caption.weight(.semibold))
+          .foregroundStyle(.green)
+        Spacer()
+        Text("from Health")
+          .font(.caption2)
+          .foregroundStyle(.secondary)
+      }
+      HStack(spacing: 0) {
+        liveCell(value: heartRate > 0 ? String(format: "%.0f", heartRate) : "–", unit: "BPM",  icon: "heart.fill",  color: .red)
+        Divider().frame(height: 36)
+        liveCell(value: String(format: "%.2f", distance), unit: "km",   icon: "figure.walk", color: .blue)
+        Divider().frame(height: 36)
+        liveCell(value: String(format: "%.0f", calories), unit: "kcal", icon: "flame.fill",  color: .orange)
+      }
+    }
+    .padding()
+    .background(.green.opacity(0.08), in: RoundedRectangle(cornerRadius: 16))
+    .overlay(RoundedRectangle(cornerRadius: 16).stroke(.green.opacity(0.25), lineWidth: 1))
+  }
+
+  private func liveCell(value: String, unit: String, icon: String, color: Color) -> some View {
+    VStack(spacing: 2) {
+      Image(systemName: icon).font(.caption).foregroundStyle(color)
+      HStack(alignment: .firstTextBaseline, spacing: 2) {
+        Text(value).font(.subheadline.weight(.bold).monospacedDigit())
+        Text(unit).font(.caption2).foregroundStyle(.secondary)
+      }
+    }
+    .frame(maxWidth: .infinity)
+    .padding(.vertical, 6)
+  }
+}
 
 struct HeartRateCard: View {
   let heartRate: Double

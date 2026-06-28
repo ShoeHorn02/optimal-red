@@ -17,6 +17,18 @@ class HealthKitManager: NSObject, ObservableObject {
   @Published var routeCoordinates: [CLLocationCoordinate2D] = []
   @Published var routeElevationGain: Double = 0
   @Published var isLoadingRoute = false
+  @Published var isFetchingWorkouts = false
+  @Published var hasMoreWorkouts = true
+
+  // MARK: - Live observation (any active workout — Fitness app, our app, etc.)
+  @Published var isLiveSessionActive = false
+  @Published var liveHeartRate: Double = 0
+  @Published var liveDistance: Double = 0
+  @Published var liveCalories: Double = 0
+
+  private var observerQueries: [HKObserverQuery] = []
+  private var workoutPageCursor: Date? = nil
+  private let workoutPageSize = 20
 
   private let healthStore = HKHealthStore()
 
@@ -105,36 +117,119 @@ class HealthKitManager: NSObject, ObservableObject {
     healthStore.execute(query)
   }
 
-  // MARK: - Hike workouts
+  // MARK: - Hike workouts (paginated)
 
   func fetchRecentWorkouts() {
+    workoutPageCursor = nil
+    recentWorkouts = []
+    hasMoreWorkouts = true
+    fetchNextWorkoutPage()
+  }
+
+  func fetchMoreWorkouts() {
+    guard hasMoreWorkouts, !isFetchingWorkouts else { return }
+    fetchNextWorkoutPage()
+  }
+
+  private func fetchNextWorkoutPage() {
+    isFetchingWorkouts = true
     let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
-    let thirtyDaysAgo = Date().addingTimeInterval(-30 * 24 * 3600)
-    let datePredicate = HKQuery.predicateForSamples(withStart: thirtyDaysAgo, end: Date())
 
     let activityPredicate = NSCompoundPredicate(orPredicateWithSubpredicates: [
       HKQuery.predicateForWorkouts(with: .hiking),
       HKQuery.predicateForWorkouts(with: .walking),
       HKQuery.predicateForWorkouts(with: .running),
+      HKQuery.predicateForWorkouts(with: .cycling),
     ])
 
-    let combined = NSCompoundPredicate(andPredicateWithSubpredicates: [datePredicate, activityPredicate])
+    let predicate: NSPredicate
+    if let cursor = workoutPageCursor {
+      let datePredicate = HKQuery.predicateForSamples(withStart: .distantPast, end: cursor)
+      predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [datePredicate, activityPredicate])
+    } else {
+      predicate = activityPredicate
+    }
 
     let query = HKSampleQuery(
       sampleType: HKObjectType.workoutType(),
-      predicate: combined,
-      limit: 10,
+      predicate: predicate,
+      limit: workoutPageSize,
       sortDescriptors: [sort]
     ) { [weak self] _, samples, _ in
+      guard let self else { return }
       let workouts = samples as? [HKWorkout] ?? []
       DispatchQueue.main.async {
-        self?.recentWorkouts = workouts
-        if let first = workouts.first {
-          self?.selectWorkout(first)
+        let isFirst = self.recentWorkouts.isEmpty
+        self.recentWorkouts.append(contentsOf: workouts)
+        self.isFetchingWorkouts = false
+        self.hasMoreWorkouts = workouts.count == self.workoutPageSize
+        self.workoutPageCursor = workouts.last?.startDate
+        if isFirst, let first = workouts.first {
+          self.selectWorkout(first)
         }
       }
     }
     healthStore.execute(query)
+  }
+
+  // MARK: - Live observation (works with Fitness app, our app, or any HealthKit source)
+
+  func startLiveObservation() {
+    stopLiveObservation()
+    let types: [(HKQuantityTypeIdentifier, (Double) -> Void)] = [
+      (.heartRate,              { [weak self] v in self?.liveHeartRate = v }),
+      (.distanceWalkingRunning, { [weak self] v in self?.liveDistance  = v / 1000 }),
+      (.activeEnergyBurned,     { [weak self] v in self?.liveCalories  = v }),
+    ]
+    for (id, handler) in types {
+      guard let type = HKQuantityType.quantityType(forIdentifier: id) else { continue }
+      let observer = HKObserverQuery(sampleType: type, predicate: nil) { [weak self] _, completion, _ in
+        self?.fetchLatestSample(type: type, unit: Self.unit(for: id), handler: handler)
+        completion()
+      }
+      healthStore.execute(observer)
+      healthStore.enableBackgroundDelivery(for: type, frequency: .immediate) { _, _ in }
+      observerQueries.append(observer)
+    }
+  }
+
+  func stopLiveObservation() {
+    observerQueries.forEach { healthStore.stop($0) }
+    observerQueries = []
+    isLiveSessionActive = false
+  }
+
+  private func fetchLatestSample(type: HKQuantityType, unit: HKUnit, handler: @escaping (Double) -> Void) {
+    let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
+    let since = Date().addingTimeInterval(-60)
+    let predicate = HKQuery.predicateForSamples(withStart: since, end: nil)
+    let query = HKSampleQuery(sampleType: type, predicate: predicate, limit: 1, sortDescriptors: [sort]) { [weak self] _, samples, _ in
+      guard let sample = samples?.first as? HKQuantitySample else { return }
+      let value = sample.quantity.doubleValue(for: unit)
+      DispatchQueue.main.async {
+        handler(value)
+        self?.isLiveSessionActive = true
+        self?.scheduleLiveTimeout()
+      }
+    }
+    healthStore.execute(query)
+  }
+
+  private var liveTimeoutTask: Task<Void, Never>?
+  private func scheduleLiveTimeout() {
+    liveTimeoutTask?.cancel()
+    liveTimeoutTask = Task { [weak self] in
+      try? await Task.sleep(nanoseconds: 30_000_000_000)
+      await MainActor.run { self?.isLiveSessionActive = false }
+    }
+  }
+
+  private static func unit(for id: HKQuantityTypeIdentifier) -> HKUnit {
+    switch id {
+    case .heartRate:              return HKUnit(from: "count/min")
+    case .activeEnergyBurned:    return .kilocalorie()
+    default:                      return .meter()
+    }
   }
 
   func selectWorkout(_ workout: HKWorkout) {
