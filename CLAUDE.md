@@ -301,24 +301,23 @@ In Xcode Info.plist for both Watch & iPhone:
 ## fastlane Setup
 
 Fastlane is configured in `packages/ios/OptimalRed/fastlane/`.
+All fastlane commands must be run from `packages/ios/OptimalRed/`.
 
 ### Lanes
 | Command | What it does |
 |---|---|
-| `fastlane build` | Clean archive locally (output: `build/OptimalRed.ipa`) |
+| `fastlane build` | Clean archive locally — use this to verify every change compiles and signs correctly |
 | `fastlane beta` | Bump build number → build → upload to TestFlight |
 | `fastlane bump_build` | Increment build number only |
 
-### To enable TestFlight deploys
-Create `packages/ios/OptimalRed/fastlane/.env.local`:
-```sh
-ASC_KEY_ID=<from App Store Connect → Users & Access → Keys>
-ASC_ISSUER_ID=<issuer UUID on same page>
-ASC_KEY_PATH=~/AuthKey_XXXXXX.p8
-TEAM_ID=<your 10-char team ID>
-ITC_TEAM_ID=<numeric App Store Connect team ID>
-```
-Run from `packages/ios/OptimalRed/`: `fastlane beta`
+### Development workflow
+- **After every meaningful change**: run `fastlane build` to confirm the release build is clean (catches import errors, deprecated APIs, signing issues that the simulator misses)
+- **After completing a feature or batch of changes**: run `fastlane beta` to ship a TestFlight build so it can be tested on a real device immediately
+- The Watch app is bundled automatically — one `fastlane beta` ships both iPhone and Watch
+
+### Credentials (already configured)
+`packages/ios/OptimalRed/fastlane/.env.local` is set up with the App Store Connect API key.
+Do not commit `.env.local` — it is gitignored.
 
 ## Pinned UI Improvements (Next Sprint)
 - [ ] Active recording: elevation gain graph as user walks (like Fitness.app)
