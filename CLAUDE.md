@@ -360,6 +360,52 @@ All fastlane commands must be run from `packages/ios/OptimalRed/`.
 `packages/ios/OptimalRed/fastlane/.env.local` is set up with the App Store Connect API key.
 Do not commit `.env.local` — it is gitignored.
 
+## Running Locally (CLI – No Xcode Needed)
+
+### Build & Run iOS App in Simulator
+
+**Copy & paste this command from `packages/ios/OptimalRed` directory:**
+
+```bash
+fastlane build && xcodebuild -scheme OptimalRed -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath build install && xcrun simctl launch booted app.optimalred.ios && sleep 2 && ps aux | grep OptimalRed | grep -v grep
+```
+
+This builds, launches in simulator, and shows the running process (PID, CPU%, memory, status).
+
+**Expected output:**
+Shows iPhone app running in simulator with process info:
+```
+riyaaddinath-nc  40882   0.0  2.3 435695216  376524   ??  S     9:09AM   0:01.45 /path/to/OptimalRed.app/OptimalRed
+```
+
+### Quick Commands
+
+```bash
+cd /Users/riyaaddinath-nc/Music/optimal-red/packages/ios/OptimalRed
+
+# Build everything
+fastlane build
+
+# Upload to TestFlight
+fastlane beta
+
+# Run on simulator (after build)
+xcodebuild -scheme OptimalRed -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath build install
+
+# Kill running app
+killall OptimalRed
+
+# Check if running
+ps aux | grep OptimalRed | grep -v grep
+```
+
+### macOS App (Phase 2)
+When the macOS app is ready, use the same pattern as GuidanceMac:
+```bash
+cd /Users/riyaaddinath-nc/Music/optimal-red/packages/macos/OptimalRedMac
+fastlane build && open build/OptimalRedMac.app && sleep 2 && ps aux | grep OptimalRedMac | grep -v grep
+```
+
 ## Pinned UI Improvements (Next Sprint)
 - [ ] Active recording: elevation gain graph as user walks (like Fitness.app)
 - [ ] Active recording: per-km (or per-mile) split times
