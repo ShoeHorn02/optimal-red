@@ -1,5 +1,6 @@
 import SwiftUI
 import HealthKit
+import Combine
 
 struct MetricsView: View {
   @EnvironmentObject var healthKitManager: HealthKitManager
@@ -52,8 +53,13 @@ struct MetricsView: View {
         healthKitManager.requestAuthorization()
         healthKitManager.startHealthKitUpdates()
         healthKitManager.startLiveObservation()
+        healthKitManager.pollForLiveActivity()
         if healthKitManager.recentWorkouts.isEmpty { healthKitManager.fetchRecentWorkouts() }
         withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) { pulse = true }
+      }
+      // Poll every 60s so we catch the batch HR sync from Apple Watch
+      .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { _ in
+        healthKitManager.pollForLiveActivity()
       }
     }
   }

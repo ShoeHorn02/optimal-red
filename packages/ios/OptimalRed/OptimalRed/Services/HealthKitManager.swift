@@ -218,9 +218,15 @@ class HealthKitManager: NSObject, ObservableObject {
     isLiveSessionActive = false
   }
 
+  // Apple Watch syncs HR to iPhone HealthKit every ~1-2 min during a workout,
+  // so we look back 5 minutes and keep the banner alive for 5 minutes after the
+  // last reading instead of the original 60s / 30s which was too tight.
+  private static let liveWindowSeconds: TimeInterval = 300
+  private static let liveTimeoutSeconds: UInt64      = 300_000_000_000
+
   private func fetchLatestSample(type: HKQuantityType, unit: HKUnit, handler: @escaping (Double) -> Void) {
     let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
-    let since = Date().addingTimeInterval(-60)
+    let since = Date().addingTimeInterval(-Self.liveWindowSeconds)
     let predicate = HKQuery.predicateForSamples(withStart: since, end: nil)
     let query = HKSampleQuery(sampleType: type, predicate: predicate, limit: 1, sortDescriptors: [sort]) { [weak self] _, samples, _ in
       guard let sample = samples?.first as? HKQuantitySample else { return }
@@ -234,11 +240,20 @@ class HealthKitManager: NSObject, ObservableObject {
     healthStore.execute(query)
   }
 
+  // Foreground poll — called by MetricsView timer every 60s so we catch the
+  // batch sync from Watch without waiting for an observer callback.
+  func pollForLiveActivity() {
+    guard let type = HKQuantityType.quantityType(forIdentifier: .heartRate) else { return }
+    fetchLatestSample(type: type, unit: HKUnit(from: "count/min")) { [weak self] bpm in
+      self?.liveHeartRate = bpm
+    }
+  }
+
   private var liveTimeoutTask: Task<Void, Never>?
   private func scheduleLiveTimeout() {
     liveTimeoutTask?.cancel()
     liveTimeoutTask = Task { [weak self] in
-      try? await Task.sleep(nanoseconds: 30_000_000_000)
+      try? await Task.sleep(nanoseconds: Self.liveTimeoutSeconds)
       await MainActor.run { self?.isLiveSessionActive = false }
     }
   }
