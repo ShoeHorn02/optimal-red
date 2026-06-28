@@ -80,33 +80,72 @@ Optimal Red is a comprehensive health tracking application for Apple ecosystem d
 optimal-red/
 ├── packages/
 │   ├── shared/           ← Shared types (HealthMetric, User, sync protocol)
-│   ├── watchos/          ← Watch app (records metrics via HealthKit)
+│   ├── watchos/          ← Watch app source (embedded inside iOS project at build time)
 │   ├── ios/              ← iPhone app (hub: storage + sync engine)
+│   │   └── OptimalRed/
+│   │       ├── OptimalRed.xcworkspace   ← Open this in Xcode (references both projects)
+│   │       ├── OptimalRed.xcodeproj     ← iOS project (embeds Watch via cross-project ref)
+│   │       └── fastlane/                ← Build & TestFlight automation
 │   ├── macos/            ← Mac app (Phase 2)
 │   └── backend/          ← Next.js backend (Phase 1)
 ├── .github/workflows/    ← CI/CD
 └── CLAUDE.md
 ```
 
+### Watch + iPhone Bundling
+The Watch app is **embedded inside the iOS Xcode project**, not a separate submission:
+- `OptimalRed.xcworkspace` references both `OptimalRed.xcodeproj` and `OptimalRedWatch.xcodeproj`
+- `OptimalRed.xcodeproj` has a cross-project reference to the Watch project with a `PBXTargetDependency` and an "Embed Watch Content" `PBXCopyFilesBuildPhase`
+- One `fastlane beta` → one IPA → one App Store Connect app → Watch auto-installs on paired Apple Watch when user installs the iPhone app
+- Watch bundle ID: `app.optimalred.watchos.watchkitapp`, companion set to `app.optimalred.ios`
+
 ### Data Flow
 ```
-Apple Watch (HealthKit)
-  ↓ [WatchConnectivity]
-iPhone (SwiftData hub, sync engine)
-  ↓ [HTTPS - Phase 1]
-Backend (PostgreSQL)
+Apple Watch (HealthKit + HKWorkoutSession)
+  │  passive sync every 15 min (WatchConnectivity applicationContext)
+  │  live workout stream every 3s (WatchConnectivity sendMessage)
   ↓
-Mac + Web Dashboard
+iPhone (SwiftData hub)
+  │  stores StoredHealthMetric via SwiftData
+  │  displays: Today metrics, MapKit GPS routes, History, live recording UI
+  ↓ [HTTPS — Phase 1]
+Backend (Next.js + PostgreSQL on DigitalOcean)
+  ↓
+Mac App + Web Dashboard (Phase 2/3)
+```
+
+### Workout Recording Flow
+```
+iPhone RecordingView
+  → WorkoutRecordingManager.startHike/startWalk()
+  → WCSession.sendMessage(["command": "startHike"])
+  → Watch WatchConnectivityManager receives command
+  → WorkoutManager.startWorkout(type:)
+  → HKWorkoutSession + HKLiveWorkoutBuilder start on Watch
+  → workoutBuilder(_:didCollectDataOf:) fires on new HR/distance/calories
+  → broadcastToPhone() every 3s via WCSession.sendMessage
+  → iPhone WatchConnectivityService routes to WorkoutRecordingManager.handleLiveUpdate()
+  → RecordingView updates live timer, HR, distance, calories
+```
+
+### Siri Integration
+```
+"Begin hike in Optimal Red"  → StartHikeIntent.perform()
+"Begin walk in Optimal Red"  → StartWalkIntent.perform()
+"Stop recording in Optimal Red" → StopRecordingIntent.perform()
+  → NotificationCenter.post(.startHike / .startWalk / .stopRecording)
+  → OptimalRedApp receives notification → triggers WorkoutRecordingManager
 ```
 
 ### Technology Stack
-- **Watch OS**: SwiftUI + HealthKit (native sensors)
-- **iOS**: SwiftUI + SwiftData (local persistence)
+- **watchOS**: SwiftUI + HealthKit + HKWorkoutSession + HKLiveWorkoutBuilder
+- **iOS**: SwiftUI + SwiftData + AppIntents (Siri) + MapKit
+- **IPC**: WatchConnectivity (passive applicationContext + live sendMessage)
 - **macOS**: SwiftUI (Phase 2)
-- **Backend**: Next.js 16 + TypeScript + Drizzle ORM + PostgreSQL
+- **Backend**: Next.js + TypeScript + Drizzle ORM + PostgreSQL
 - **Cloud**: DigitalOcean (App Platform + Managed PostgreSQL)
-- **IPC**: WatchConnectivity framework
 - **Auth**: Apple Sign-in (Phase 1)
+- **CI/Build**: fastlane (gym + pilot) using `OptimalRed.xcworkspace`
 
 ## Phasing
 
